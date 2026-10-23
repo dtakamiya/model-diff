@@ -1,0 +1,28 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// ローカルの JDK が 17 より新しくても Java 17 向けにコンパイルする
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+application {
+    mainClass = 'ledger.Main'
+    applicationName = 'ledger'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

@@ -1,0 +1,1329 @@
+{
+  "generatedAt": "2026-10-23T23:30:27+09:00",
+  "targets": [
+    {
+      "id": "solo-haiku",
+      "label": "単発 Haiku",
+      "build": {
+        "ok": true,
+        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 911ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+      },
+      "ownTests": {
+        "total": 63,
+        "passed": 63,
+        "failed": 0,
+        "skipped": 0
+      },
+      "acceptance": {
+        "total": 26,
+        "passed": 26,
+        "cases": [
+          {
+            "id": "A01",
+            "name": "add は採番した ID 1 を標準出力に出す",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A02",
+            "name": "連続 add で ID が 1,2,3 と採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A03",
+            "name": "list の固定書式と並び順（日付昇順・同日は ID 昇順・memo 空は行末タブ）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A04",
+            "name": "別プロセスで読み直しても保存したデータが残る（データファイルが作られる）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A05",
+            "name": "list --month は指定月のみを返す（月またぎ・年またぎを除外）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A06",
+            "name": "delete は 'deleted <id>' を出し、list から消える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A07",
+            "name": "末尾の ID を削除しても次の add は ID を再利用しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A08",
+            "name": "全件削除した後も採番が続く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A09",
+            "name": "summary の収入・支出・残高とカテゴリ別支出（金額降順）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A10",
+            "name": "summary のカテゴリ並び（同額はカテゴリ名昇順、収入カテゴリは含めない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A11",
+            "name": "summary: 該当データの無い月はすべて 0.00 でカテゴリ行は空",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A12",
+            "name": "summary: 残高がマイナスのとき先頭に - が付く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A13",
+            "name": "金額は常に小数 2 桁で出力（1200→1200.00, 1200.5→1200.50, 1200.50→1200.50, 007→7.00）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A14",
+            "name": "浮動小数誤差が出ない（0.10 を 3 回足して 0.30、0.1+0.2 系）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A15",
+            "name": "金額不正（0・0.00・負・小数3桁・非数値・1e3・1,200 等）は終了コード 2 で保存されない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A16",
+            "name": "日付不正（2026-02-30 等）は終了コード 2、実在日（2024-02-29）は成功",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A17",
+            "name": "type 不正（Income / transfer / 空）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A18",
+            "name": "category 空・タブ含み、memo にタブ・改行含みは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A19",
+            "name": "存在しない ID の delete は終了コード 3（データは変更されない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A20",
+            "name": "delete の ID が不正（abc・0・-1・01・小数・オーバーフロー）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A21",
+            "name": "引数の過不足・未知のコマンド・不正オプションは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A22",
+            "name": "メモ・カテゴリにカンマとダブルクォートを含めても壊れない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A23",
+            "name": "日本語・空白を含むカテゴリとメモ、空文字メモを扱える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A24",
+            "name": "データファイル未存在・0 バイトでも list は空（ヘッダーのみ）、summary はゼロ",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A25",
+            "name": "--data を指定しないとき ~/.ledger.csv（user.home 直下）を使う",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A26",
+            "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          }
+        ]
+      },
+      "lines": {
+        "main": 852,
+        "test": 409
+      },
+      "files": [
+        "build.gradle",
+        "settings.gradle",
+        "src/main/java/ledger/ExitCode.java",
+        "src/main/java/ledger/LedgerException.java",
+        "src/main/java/ledger/Main.java",
+        "src/main/java/ledger/cli/App.java",
+        "src/main/java/ledger/cli/InputParser.java",
+        "src/main/java/ledger/cli/Report.java",
+        "src/main/java/ledger/domain/Entry.java",
+        "src/main/java/ledger/domain/EntryType.java",
+        "src/main/java/ledger/domain/FieldRules.java",
+        "src/main/java/ledger/domain/Ledger.java",
+        "src/main/java/ledger/domain/Money.java",
+        "src/main/java/ledger/domain/Summary.java",
+        "src/main/java/ledger/storage/CsvCodec.java",
+        "src/main/java/ledger/storage/CsvLedgerStore.java",
+        "src/test/java/ledger/cli/AppTest.java",
+        "src/test/java/ledger/domain/FieldRulesTest.java",
+        "src/test/java/ledger/domain/LedgerTest.java",
+        "src/test/java/ledger/domain/MoneyTest.java",
+        "src/test/java/ledger/storage/CsvCodecTest.java"
+      ],
+      "sample": "$ ledger add 2026-10-01 expense food 1200.5 ランチ\n1\n[exit 0]\n\n$ ledger add 2026-10-02 income salary 300000 給料\n2\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n3\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n4\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n5\n[exit 0]\n\n$ ledger list\nid\tdate\ttype\tcategory\tamount\tmemo\n1\t2026-10-01\texpense\tfood\t1200.50\tランチ\n2\t2026-10-02\tincome\tsalary\t300000.00\t給料\n3\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n4\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n5\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n[exit 0]\n\n$ ledger summary --month 2026-10\nmonth\t2026-10\nincome\t300000.00\nexpense\t1200.80\nbalance\t298799.20\nexpense_by_category\nfood\t1200.80\n[exit 0]\n\n$ ledger delete 99\nerror: ID 99 の記録は存在しません\n[exit 3]\n\n$ ledger add 2026-10-04 expense food -5 不正金額\nerror: 金額は 0 より大きい数（整数部 12 桁以内、小数 2 桁以内）で指定してください\n[exit 2]\n",
+      "cost": {
+        "total": 0.0636,
+        "minutes": 4.2,
+        "breakdown": [
+          {
+            "model": "Haiku",
+            "inputTokens": 52,
+            "outputTokens": 53075,
+            "cacheReadInputTokens": 1834169,
+            "cacheCreationInputTokens": 93472,
+            "usd": 0.0636
+          }
+        ]
+      }
+    },
+    {
+      "id": "solo-sonnet",
+      "label": "単発 Sonnet",
+      "build": {
+        "ok": true,
+        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 723ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+      },
+      "ownTests": {
+        "total": 16,
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      "acceptance": {
+        "total": 26,
+        "passed": 26,
+        "cases": [
+          {
+            "id": "A01",
+            "name": "add は採番した ID 1 を標準出力に出す",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A02",
+            "name": "連続 add で ID が 1,2,3 と採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A03",
+            "name": "list の固定書式と並び順（日付昇順・同日は ID 昇順・memo 空は行末タブ）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A04",
+            "name": "別プロセスで読み直しても保存したデータが残る（データファイルが作られる）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A05",
+            "name": "list --month は指定月のみを返す（月またぎ・年またぎを除外）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A06",
+            "name": "delete は 'deleted <id>' を出し、list から消える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A07",
+            "name": "末尾の ID を削除しても次の add は ID を再利用しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A08",
+            "name": "全件削除した後も採番が続く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A09",
+            "name": "summary の収入・支出・残高とカテゴリ別支出（金額降順）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A10",
+            "name": "summary のカテゴリ並び（同額はカテゴリ名昇順、収入カテゴリは含めない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A11",
+            "name": "summary: 該当データの無い月はすべて 0.00 でカテゴリ行は空",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A12",
+            "name": "summary: 残高がマイナスのとき先頭に - が付く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A13",
+            "name": "金額は常に小数 2 桁で出力（1200→1200.00, 1200.5→1200.50, 1200.50→1200.50, 007→7.00）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A14",
+            "name": "浮動小数誤差が出ない（0.10 を 3 回足して 0.30、0.1+0.2 系）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A15",
+            "name": "金額不正（0・0.00・負・小数3桁・非数値・1e3・1,200 等）は終了コード 2 で保存されない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A16",
+            "name": "日付不正（2026-02-30 等）は終了コード 2、実在日（2024-02-29）は成功",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A17",
+            "name": "type 不正（Income / transfer / 空）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A18",
+            "name": "category 空・タブ含み、memo にタブ・改行含みは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A19",
+            "name": "存在しない ID の delete は終了コード 3（データは変更されない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A20",
+            "name": "delete の ID が不正（abc・0・-1・01・小数・オーバーフロー）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A21",
+            "name": "引数の過不足・未知のコマンド・不正オプションは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A22",
+            "name": "メモ・カテゴリにカンマとダブルクォートを含めても壊れない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A23",
+            "name": "日本語・空白を含むカテゴリとメモ、空文字メモを扱える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A24",
+            "name": "データファイル未存在・0 バイトでも list は空（ヘッダーのみ）、summary はゼロ",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A25",
+            "name": "--data を指定しないとき ~/.ledger.csv（user.home 直下）を使う",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A26",
+            "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          }
+        ]
+      },
+      "lines": {
+        "main": 607,
+        "test": 219
+      },
+      "files": [
+        "build.gradle",
+        "settings.gradle",
+        "src/main/java/ledger/Commands.java",
+        "src/main/java/ledger/CsvCodec.java",
+        "src/main/java/ledger/Entry.java",
+        "src/main/java/ledger/EntryType.java",
+        "src/main/java/ledger/Ledger.java",
+        "src/main/java/ledger/LedgerException.java",
+        "src/main/java/ledger/LedgerRepository.java",
+        "src/main/java/ledger/Main.java",
+        "src/main/java/ledger/Money.java",
+        "src/main/java/ledger/Validators.java",
+        "src/test/java/ledger/CsvCodecTest.java",
+        "src/test/java/ledger/MainTest.java",
+        "src/test/java/ledger/MoneyTest.java"
+      ],
+      "sample": "$ ledger add 2026-10-01 expense food 1200.5 ランチ\n1\n[exit 0]\n\n$ ledger add 2026-10-02 income salary 300000 給料\n2\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n3\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n4\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n5\n[exit 0]\n\n$ ledger list\nid\tdate\ttype\tcategory\tamount\tmemo\n1\t2026-10-01\texpense\tfood\t1200.50\tランチ\n2\t2026-10-02\tincome\tsalary\t300000.00\t給料\n3\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n4\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n5\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n[exit 0]\n\n$ ledger summary --month 2026-10\nmonth\t2026-10\nincome\t300000.00\nexpense\t1200.80\nbalance\t298799.20\nexpense_by_category\nfood\t1200.80\n[exit 0]\n\n$ ledger delete 99\nerror: id 99 は存在しません\n[exit 3]\n\n$ ledger add 2026-10-04 expense food -5 不正金額\nerror: amount は 0 より大きい小数 2 桁以内の数値で指定してください: -5\n[exit 2]\n",
+      "cost": {
+        "total": 0.4977,
+        "minutes": 3.0,
+        "breakdown": [
+          {
+            "model": "Sonnet",
+            "inputTokens": 22,
+            "outputTokens": 27506,
+            "cacheReadInputTokens": 525843,
+            "cacheCreationInputTokens": 42495,
+            "usd": 0.4977
+          }
+        ]
+      }
+    },
+    {
+      "id": "solo-opus",
+      "label": "単発 Opus",
+      "build": {
+        "ok": true,
+        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 788ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+      },
+      "ownTests": {
+        "total": 42,
+        "passed": 42,
+        "failed": 0,
+        "skipped": 0
+      },
+      "acceptance": {
+        "total": 26,
+        "passed": 26,
+        "cases": [
+          {
+            "id": "A01",
+            "name": "add は採番した ID 1 を標準出力に出す",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A02",
+            "name": "連続 add で ID が 1,2,3 と採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A03",
+            "name": "list の固定書式と並び順（日付昇順・同日は ID 昇順・memo 空は行末タブ）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A04",
+            "name": "別プロセスで読み直しても保存したデータが残る（データファイルが作られる）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A05",
+            "name": "list --month は指定月のみを返す（月またぎ・年またぎを除外）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A06",
+            "name": "delete は 'deleted <id>' を出し、list から消える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A07",
+            "name": "末尾の ID を削除しても次の add は ID を再利用しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A08",
+            "name": "全件削除した後も採番が続く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A09",
+            "name": "summary の収入・支出・残高とカテゴリ別支出（金額降順）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A10",
+            "name": "summary のカテゴリ並び（同額はカテゴリ名昇順、収入カテゴリは含めない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A11",
+            "name": "summary: 該当データの無い月はすべて 0.00 でカテゴリ行は空",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A12",
+            "name": "summary: 残高がマイナスのとき先頭に - が付く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A13",
+            "name": "金額は常に小数 2 桁で出力（1200→1200.00, 1200.5→1200.50, 1200.50→1200.50, 007→7.00）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A14",
+            "name": "浮動小数誤差が出ない（0.10 を 3 回足して 0.30、0.1+0.2 系）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A15",
+            "name": "金額不正（0・0.00・負・小数3桁・非数値・1e3・1,200 等）は終了コード 2 で保存されない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A16",
+            "name": "日付不正（2026-02-30 等）は終了コード 2、実在日（2024-02-29）は成功",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A17",
+            "name": "type 不正（Income / transfer / 空）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A18",
+            "name": "category 空・タブ含み、memo にタブ・改行含みは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A19",
+            "name": "存在しない ID の delete は終了コード 3（データは変更されない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A20",
+            "name": "delete の ID が不正（abc・0・-1・01・小数・オーバーフロー）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A21",
+            "name": "引数の過不足・未知のコマンド・不正オプションは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A22",
+            "name": "メモ・カテゴリにカンマとダブルクォートを含めても壊れない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A23",
+            "name": "日本語・空白を含むカテゴリとメモ、空文字メモを扱える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A24",
+            "name": "データファイル未存在・0 バイトでも list は空（ヘッダーのみ）、summary はゼロ",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A25",
+            "name": "--data を指定しないとき ~/.ledger.csv（user.home 直下）を使う",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A26",
+            "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          }
+        ]
+      },
+      "lines": {
+        "main": 889,
+        "test": 343
+      },
+      "files": [
+        "build.gradle",
+        "settings.gradle",
+        "src/main/java/ledger/Main.java",
+        "src/main/java/ledger/cli/Command.java",
+        "src/main/java/ledger/cli/CommandParser.java",
+        "src/main/java/ledger/cli/LedgerApp.java",
+        "src/main/java/ledger/cli/OutputFormatter.java",
+        "src/main/java/ledger/error/InputException.java",
+        "src/main/java/ledger/error/LedgerException.java",
+        "src/main/java/ledger/error/NotFoundException.java",
+        "src/main/java/ledger/error/StorageException.java",
+        "src/main/java/ledger/model/Entry.java",
+        "src/main/java/ledger/model/EntryType.java",
+        "src/main/java/ledger/model/FieldParser.java",
+        "src/main/java/ledger/model/LedgerData.java",
+        "src/main/java/ledger/service/LedgerService.java",
+        "src/main/java/ledger/service/MonthlySummary.java",
+        "src/main/java/ledger/storage/CsvLedgerRepository.java",
+        "src/main/java/ledger/storage/CsvLine.java",
+        "src/main/java/ledger/storage/LedgerRepository.java",
+        "src/test/java/ledger/cli/LedgerAppTest.java",
+        "src/test/java/ledger/model/FieldParserTest.java",
+        "src/test/java/ledger/storage/CsvLedgerRepositoryTest.java"
+      ],
+      "sample": "$ ledger add 2026-10-01 expense food 1200.5 ランチ\n1\n[exit 0]\n\n$ ledger add 2026-10-02 income salary 300000 給料\n2\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n3\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n4\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n5\n[exit 0]\n\n$ ledger list\nid\tdate\ttype\tcategory\tamount\tmemo\n1\t2026-10-01\texpense\tfood\t1200.50\tランチ\n2\t2026-10-02\tincome\tsalary\t300000.00\t給料\n3\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n4\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n5\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n[exit 0]\n\n$ ledger summary --month 2026-10\nmonth\t2026-10\nincome\t300000.00\nexpense\t1200.80\nbalance\t298799.20\nexpense_by_category\nfood\t1200.80\n[exit 0]\n\n$ ledger delete 99\nerror: no entry with id 99\n[exit 3]\n\n$ ledger add 2026-10-04 expense food -5 不正金額\nerror: invalid amount: -5\n[exit 2]\n",
+      "cost": {
+        "total": 1.2681,
+        "minutes": 4.1,
+        "breakdown": [
+          {
+            "model": "Opus",
+            "inputTokens": 30,
+            "outputTokens": 29043,
+            "cacheReadInputTokens": 726673,
+            "cacheCreationInputTokens": 67726,
+            "usd": 1.2681
+          }
+        ]
+      }
+    },
+    {
+      "id": "conductor-sonnet-haiku",
+      "label": "指揮者 Sonnet＋Haiku",
+      "build": {
+        "ok": true,
+        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 947ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+      },
+      "ownTests": {
+        "total": 80,
+        "passed": 80,
+        "failed": 0,
+        "skipped": 0
+      },
+      "acceptance": {
+        "total": 26,
+        "passed": 26,
+        "cases": [
+          {
+            "id": "A01",
+            "name": "add は採番した ID 1 を標準出力に出す",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A02",
+            "name": "連続 add で ID が 1,2,3 と採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A03",
+            "name": "list の固定書式と並び順（日付昇順・同日は ID 昇順・memo 空は行末タブ）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A04",
+            "name": "別プロセスで読み直しても保存したデータが残る（データファイルが作られる）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A05",
+            "name": "list --month は指定月のみを返す（月またぎ・年またぎを除外）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A06",
+            "name": "delete は 'deleted <id>' を出し、list から消える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A07",
+            "name": "末尾の ID を削除しても次の add は ID を再利用しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A08",
+            "name": "全件削除した後も採番が続く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A09",
+            "name": "summary の収入・支出・残高とカテゴリ別支出（金額降順）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A10",
+            "name": "summary のカテゴリ並び（同額はカテゴリ名昇順、収入カテゴリは含めない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A11",
+            "name": "summary: 該当データの無い月はすべて 0.00 でカテゴリ行は空",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A12",
+            "name": "summary: 残高がマイナスのとき先頭に - が付く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A13",
+            "name": "金額は常に小数 2 桁で出力（1200→1200.00, 1200.5→1200.50, 1200.50→1200.50, 007→7.00）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A14",
+            "name": "浮動小数誤差が出ない（0.10 を 3 回足して 0.30、0.1+0.2 系）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A15",
+            "name": "金額不正（0・0.00・負・小数3桁・非数値・1e3・1,200 等）は終了コード 2 で保存されない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A16",
+            "name": "日付不正（2026-02-30 等）は終了コード 2、実在日（2024-02-29）は成功",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A17",
+            "name": "type 不正（Income / transfer / 空）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A18",
+            "name": "category 空・タブ含み、memo にタブ・改行含みは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A19",
+            "name": "存在しない ID の delete は終了コード 3（データは変更されない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A20",
+            "name": "delete の ID が不正（abc・0・-1・01・小数・オーバーフロー）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A21",
+            "name": "引数の過不足・未知のコマンド・不正オプションは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A22",
+            "name": "メモ・カテゴリにカンマとダブルクォートを含めても壊れない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A23",
+            "name": "日本語・空白を含むカテゴリとメモ、空文字メモを扱える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A24",
+            "name": "データファイル未存在・0 バイトでも list は空（ヘッダーのみ）、summary はゼロ",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A25",
+            "name": "--data を指定しないとき ~/.ledger.csv（user.home 直下）を使う",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A26",
+            "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          }
+        ]
+      },
+      "lines": {
+        "main": 929,
+        "test": 526
+      },
+      "files": [
+        "build.gradle",
+        "settings.gradle",
+        "src/main/java/ledger/Command.java",
+        "src/main/java/ledger/CommandParser.java",
+        "src/main/java/ledger/Commands.java",
+        "src/main/java/ledger/CsvCodec.java",
+        "src/main/java/ledger/DataFileException.java",
+        "src/main/java/ledger/Entry.java",
+        "src/main/java/ledger/EntryType.java",
+        "src/main/java/ledger/InputException.java",
+        "src/main/java/ledger/Ledger.java",
+        "src/main/java/ledger/LedgerRepository.java",
+        "src/main/java/ledger/Main.java",
+        "src/main/java/ledger/NotFoundException.java",
+        "src/main/java/ledger/ReportFormatter.java",
+        "src/main/java/ledger/Summary.java",
+        "src/main/java/ledger/Validator.java",
+        "src/test/java/ledger/CsvCodecTest.java",
+        "src/test/java/ledger/LedgerRepositoryTest.java",
+        "src/test/java/ledger/MainIntegrationTest.java",
+        "src/test/java/ledger/SummaryTest.java",
+        "src/test/java/ledger/ValidatorTest.java"
+      ],
+      "sample": "$ ledger add 2026-10-01 expense food 1200.5 ランチ\n1\n[exit 0]\n\n$ ledger add 2026-10-02 income salary 300000 給料\n2\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n3\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n4\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n5\n[exit 0]\n\n$ ledger list\nid\tdate\ttype\tcategory\tamount\tmemo\n1\t2026-10-01\texpense\tfood\t1200.50\tランチ\n2\t2026-10-02\tincome\tsalary\t300000.00\t給料\n3\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n4\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n5\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n[exit 0]\n\n$ ledger summary --month 2026-10\nmonth\t2026-10\nincome\t300000.00\nexpense\t1200.80\nbalance\t298799.20\nexpense_by_category\nfood\t1200.80\n[exit 0]\n\n$ ledger delete 99\nerror: ID 99 のデータは存在しません\n[exit 3]\n\n$ ledger add 2026-10-04 expense food -5 不正金額\nerror: 金額は正の数（小数点以下 2 桁まで）で指定してください: -5\n[exit 2]\n",
+      "cost": {
+        "total": 0.4431,
+        "minutes": 6.7,
+        "breakdown": [
+          {
+            "model": "Sonnet",
+            "inputTokens": 24,
+            "outputTokens": 6467,
+            "cacheReadInputTokens": 456305,
+            "cacheCreationInputTokens": 45882,
+            "usd": 0.2939
+          },
+          {
+            "model": "Haiku",
+            "inputTokens": 84,
+            "outputTokens": 72082,
+            "cacheReadInputTokens": 3186380,
+            "cacheCreationInputTokens": 113470,
+            "usd": 0.1492
+          }
+        ]
+      }
+    },
+    {
+      "id": "conductor-opus-sonnet",
+      "label": "指揮者 Opus＋Sonnet",
+      "build": {
+        "ok": true,
+        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 862ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+      },
+      "ownTests": {
+        "total": 14,
+        "passed": 14,
+        "failed": 0,
+        "skipped": 0
+      },
+      "acceptance": {
+        "total": 26,
+        "passed": 26,
+        "cases": [
+          {
+            "id": "A01",
+            "name": "add は採番した ID 1 を標準出力に出す",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A02",
+            "name": "連続 add で ID が 1,2,3 と採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A03",
+            "name": "list の固定書式と並び順（日付昇順・同日は ID 昇順・memo 空は行末タブ）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A04",
+            "name": "別プロセスで読み直しても保存したデータが残る（データファイルが作られる）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A05",
+            "name": "list --month は指定月のみを返す（月またぎ・年またぎを除外）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A06",
+            "name": "delete は 'deleted <id>' を出し、list から消える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A07",
+            "name": "末尾の ID を削除しても次の add は ID を再利用しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A08",
+            "name": "全件削除した後も採番が続く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A09",
+            "name": "summary の収入・支出・残高とカテゴリ別支出（金額降順）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A10",
+            "name": "summary のカテゴリ並び（同額はカテゴリ名昇順、収入カテゴリは含めない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A11",
+            "name": "summary: 該当データの無い月はすべて 0.00 でカテゴリ行は空",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A12",
+            "name": "summary: 残高がマイナスのとき先頭に - が付く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A13",
+            "name": "金額は常に小数 2 桁で出力（1200→1200.00, 1200.5→1200.50, 1200.50→1200.50, 007→7.00）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A14",
+            "name": "浮動小数誤差が出ない（0.10 を 3 回足して 0.30、0.1+0.2 系）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A15",
+            "name": "金額不正（0・0.00・負・小数3桁・非数値・1e3・1,200 等）は終了コード 2 で保存されない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A16",
+            "name": "日付不正（2026-02-30 等）は終了コード 2、実在日（2024-02-29）は成功",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A17",
+            "name": "type 不正（Income / transfer / 空）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A18",
+            "name": "category 空・タブ含み、memo にタブ・改行含みは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A19",
+            "name": "存在しない ID の delete は終了コード 3（データは変更されない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A20",
+            "name": "delete の ID が不正（abc・0・-1・01・小数・オーバーフロー）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A21",
+            "name": "引数の過不足・未知のコマンド・不正オプションは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A22",
+            "name": "メモ・カテゴリにカンマとダブルクォートを含めても壊れない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A23",
+            "name": "日本語・空白を含むカテゴリとメモ、空文字メモを扱える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A24",
+            "name": "データファイル未存在・0 バイトでも list は空（ヘッダーのみ）、summary はゼロ",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A25",
+            "name": "--data を指定しないとき ~/.ledger.csv（user.home 直下）を使う",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A26",
+            "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          }
+        ]
+      },
+      "lines": {
+        "main": 700,
+        "test": 225
+      },
+      "files": [
+        "build.gradle",
+        "settings.gradle",
+        "src/main/java/ledger/AddCommand.java",
+        "src/main/java/ledger/Command.java",
+        "src/main/java/ledger/CommandLine.java",
+        "src/main/java/ledger/CsvCodec.java",
+        "src/main/java/ledger/DeleteCommand.java",
+        "src/main/java/ledger/Entry.java",
+        "src/main/java/ledger/EntryType.java",
+        "src/main/java/ledger/LedgerData.java",
+        "src/main/java/ledger/LedgerException.java",
+        "src/main/java/ledger/LedgerRepository.java",
+        "src/main/java/ledger/ListCommand.java",
+        "src/main/java/ledger/Main.java",
+        "src/main/java/ledger/Money.java",
+        "src/main/java/ledger/SummaryCommand.java",
+        "src/main/java/ledger/Validator.java",
+        "src/test/java/ledger/CsvCodecTest.java",
+        "src/test/java/ledger/MainTest.java"
+      ],
+      "sample": "$ ledger add 2026-10-01 expense food 1200.5 ランチ\n1\n[exit 0]\n\n$ ledger add 2026-10-02 income salary 300000 給料\n2\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n3\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n4\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n5\n[exit 0]\n\n$ ledger list\nid\tdate\ttype\tcategory\tamount\tmemo\n1\t2026-10-01\texpense\tfood\t1200.50\tランチ\n2\t2026-10-02\tincome\tsalary\t300000.00\t給料\n3\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n4\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n5\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n[exit 0]\n\n$ ledger summary --month 2026-10\nmonth\t2026-10\nincome\t300000.00\nexpense\t1200.80\nbalance\t298799.20\nexpense_by_category\nfood\t1200.80\n[exit 0]\n\n$ ledger delete 99\nerror: id not found: 99\n[exit 3]\n\n$ ledger add 2026-10-04 expense food -5 不正金額\nerror: invalid amount: -5\n[exit 2]\n",
+      "cost": {
+        "total": 1.3627,
+        "minutes": 5.8,
+        "breakdown": [
+          {
+            "model": "Opus",
+            "inputTokens": 22,
+            "outputTokens": 10954,
+            "cacheReadInputTokens": 429486,
+            "cacheCreationInputTokens": 55227,
+            "usd": 0.7469
+          },
+          {
+            "model": "Sonnet",
+            "inputTokens": 24,
+            "outputTokens": 36440,
+            "cacheReadInputTokens": 669914,
+            "cacheCreationInputTokens": 73763,
+            "usd": 0.6158
+          }
+        ]
+      }
+    },
+    {
+      "id": "conductor-opus-haiku",
+      "label": "指揮者 Opus＋Haiku",
+      "build": {
+        "ok": true,
+        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 830ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+      },
+      "ownTests": {
+        "total": 89,
+        "passed": 89,
+        "failed": 0,
+        "skipped": 0
+      },
+      "acceptance": {
+        "total": 26,
+        "passed": 26,
+        "cases": [
+          {
+            "id": "A01",
+            "name": "add は採番した ID 1 を標準出力に出す",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A02",
+            "name": "連続 add で ID が 1,2,3 と採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A03",
+            "name": "list の固定書式と並び順（日付昇順・同日は ID 昇順・memo 空は行末タブ）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A04",
+            "name": "別プロセスで読み直しても保存したデータが残る（データファイルが作られる）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A05",
+            "name": "list --month は指定月のみを返す（月またぎ・年またぎを除外）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A06",
+            "name": "delete は 'deleted <id>' を出し、list から消える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A07",
+            "name": "末尾の ID を削除しても次の add は ID を再利用しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A08",
+            "name": "全件削除した後も採番が続く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A09",
+            "name": "summary の収入・支出・残高とカテゴリ別支出（金額降順）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A10",
+            "name": "summary のカテゴリ並び（同額はカテゴリ名昇順、収入カテゴリは含めない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A11",
+            "name": "summary: 該当データの無い月はすべて 0.00 でカテゴリ行は空",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A12",
+            "name": "summary: 残高がマイナスのとき先頭に - が付く",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A13",
+            "name": "金額は常に小数 2 桁で出力（1200→1200.00, 1200.5→1200.50, 1200.50→1200.50, 007→7.00）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A14",
+            "name": "浮動小数誤差が出ない（0.10 を 3 回足して 0.30、0.1+0.2 系）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A15",
+            "name": "金額不正（0・0.00・負・小数3桁・非数値・1e3・1,200 等）は終了コード 2 で保存されない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A16",
+            "name": "日付不正（2026-02-30 等）は終了コード 2、実在日（2024-02-29）は成功",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A17",
+            "name": "type 不正（Income / transfer / 空）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A18",
+            "name": "category 空・タブ含み、memo にタブ・改行含みは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A19",
+            "name": "存在しない ID の delete は終了コード 3（データは変更されない）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A20",
+            "name": "delete の ID が不正（abc・0・-1・01・小数・オーバーフロー）は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A21",
+            "name": "引数の過不足・未知のコマンド・不正オプションは終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A22",
+            "name": "メモ・カテゴリにカンマとダブルクォートを含めても壊れない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A23",
+            "name": "日本語・空白を含むカテゴリとメモ、空文字メモを扱える",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A24",
+            "name": "データファイル未存在・0 バイトでも list は空（ヘッダーのみ）、summary はゼロ",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A25",
+            "name": "--data を指定しないとき ~/.ledger.csv（user.home 直下）を使う",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A26",
+            "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          }
+        ]
+      },
+      "lines": {
+        "main": 745,
+        "test": 508
+      },
+      "files": [
+        "build.gradle",
+        "settings.gradle",
+        "src/main/java/ledger/App.java",
+        "src/main/java/ledger/Entry.java",
+        "src/main/java/ledger/InputException.java",
+        "src/main/java/ledger/LedgerData.java",
+        "src/main/java/ledger/LedgerFile.java",
+        "src/main/java/ledger/LedgerIOException.java",
+        "src/main/java/ledger/LedgerService.java",
+        "src/main/java/ledger/Main.java",
+        "src/main/java/ledger/Money.java",
+        "src/main/java/ledger/NotFoundException.java",
+        "src/main/java/ledger/OutputFormatter.java",
+        "src/main/java/ledger/Summary.java",
+        "src/main/java/ledger/Validator.java",
+        "src/test/java/ledger/AppTest.java",
+        "src/test/java/ledger/LedgerFileTest.java",
+        "src/test/java/ledger/ValidatorTest.java"
+      ],
+      "sample": "$ ledger add 2026-10-01 expense food 1200.5 ランチ\n1\n[exit 0]\n\n$ ledger add 2026-10-02 income salary 300000 給料\n2\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n3\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n4\n[exit 0]\n\n$ ledger add 2026-10-03 expense food 0.10 駄菓子\n5\n[exit 0]\n\n$ ledger list\nid\tdate\ttype\tcategory\tamount\tmemo\n1\t2026-10-01\texpense\tfood\t1200.50\tランチ\n2\t2026-10-02\tincome\tsalary\t300000.00\t給料\n3\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n4\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n5\t2026-10-03\texpense\tfood\t0.10\t駄菓子\n[exit 0]\n\n$ ledger summary --month 2026-10\nmonth\t2026-10\nincome\t300000.00\nexpense\t1200.80\nbalance\t298799.20\nexpense_by_category\nfood\t1200.80\n[exit 0]\n\n$ ledger delete 99\nerror: ID 99 は存在しません\n[exit 3]\n\n$ ledger add 2026-10-04 expense food -5 不正金額\nerror: 金額は正の数（小数点以下 2 桁まで）で指定してください: -5\n[exit 2]\n",
+      "cost": {
+        "total": 0.8361,
+        "minutes": 8.1,
+        "breakdown": [
+          {
+            "model": "Opus",
+            "inputTokens": 28,
+            "outputTokens": 11094,
+            "cacheReadInputTokens": 641006,
+            "cacheCreationInputTokens": 41862,
+            "usd": 0.6851
+          },
+          {
+            "model": "Haiku",
+            "inputTokens": 82,
+            "outputTokens": 80786,
+            "cacheReadInputTokens": 2960121,
+            "cacheCreationInputTokens": 154520,
+            "usd": 0.151
+          }
+        ]
+      }
+    }
+  ]
+}
