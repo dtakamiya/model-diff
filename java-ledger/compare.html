@@ -163,6 +163,21 @@
   .cost-breakdown div { white-space: nowrap; }
   .cost-note { margin: 12px 0 0; color: #777; font-size: 11px; line-height: 1.6; }
   .tbl td.c { text-align: center; }
+
+  /* レビュー */
+  #method { color: #777; font-size: 11px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+  #method + #generated { margin-left: 0; }
+  .rv-axis { display: grid; grid-template-columns: 84px 1fr; gap: 2px 8px; padding: 4px 0; align-items: center; }
+  .rv-axis .rv-meta { grid-column: 2; color: #888; font-size: 11px; }
+  .rv-axis .bar-track { margin-top: 0; min-width: 0; }
+  .rv-avg { color: #fff; margin-left: 6px; }
+  .rv-split { color: #e0b060; font-size: 10px; margin-left: 6px; border: 1px solid #5a4520; border-radius: 3px; padding: 0 4px; }
+  .rv-toggle { display: flex; gap: 6px; margin: 10px 0 6px; }
+  .rv-comment { padding: 3px 0; color: #aaa; line-height: 1.5; }
+  .rv-comment b { color: #888; font-weight: normal; margin-right: 6px; }
+  .rv-list { margin: 4px 0 4px 16px; padding: 0; color: #aaa; line-height: 1.5; }
+  .rv-h { margin: 10px 0 2px; color: #888; font-size: 11px; }
+  .rv-summary { margin: 8px 0 0; color: #ccc; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -175,6 +190,7 @@
   </select>
   <button id="cost-btn" type="button" aria-haspopup="dialog">コスト表</button>
   <button id="cases-btn" type="button" aria-haspopup="dialog">ケース横断表</button>
+  <span id="method"></span>
   <span id="generated"></span>
 </header>
 
@@ -193,9 +209,13 @@
 <script>
 // ===== 設定 =====
 const DEFAULT_DATA = 'results.json';
+const DEFAULT_REVIEWS = 'reviews.json';
+const MAX_SCORE = 10;
+const SPLIT_THRESHOLD = 3;
 const TOKENS_PER_K = 1000;
 const LAYOUTS = { '3x2': { cols: 3, rows: 2 }, '2x3': { cols: 2, rows: 3 }, 'tabs': { cols: 1, rows: 1 } };
 const CARD_TABS = [
+  { key: 'review', label: 'レビュー' },
   { key: 'accept', label: '受け入れ' },
   { key: 'sample', label: '実行例' },
   { key: 'source', label: 'ソース' },
@@ -205,7 +225,7 @@ const CARD_TABS = [
 const LANG_BY_EXT = { java: 'java', xml: 'xml', json: 'json', md: 'markdown', yml: 'yaml', yaml: 'yaml', kts: 'kotlin', gradle: 'java', properties: 'ini', sh: 'bash' };
 
 // 比較表の列。value は並べ替え用の数値（null は常に最後）、best は最良を決める向き。
-const COLUMNS = [
+const BASE_COLUMNS = [
   { key: 'label', name: '構成', value: (t, i) => i },
   { key: 'acc', name: '受け入れ合格', value: (t) => accRate(t), best: 'max' },
   { key: 'own', name: '自前テスト(失敗)', value: (t) => (t.ownTests ? t.ownTests.failed : null), best: 'min' },
@@ -214,12 +234,22 @@ const COLUMNS = [
   { key: 'cost', name: 'コスト$', value: (t) => (t.cost ? t.cost.total : null), best: 'min' },
   { key: 'min', name: '時間(分)', value: (t) => (t.cost ? t.cost.minutes : null), best: 'min' },
 ];
+let COLUMNS = BASE_COLUMNS;
+
+// レビュー列（reviews 読み込み後に COLUMNS へ追加）
+function buildColumns() {
+  if (!reviews) { COLUMNS = BASE_COLUMNS; return; }
+  const axisCols = reviews.axes.map((a) => ({ key: `rv_${a.key}`, name: a.label, axis: a.key, value: (t) => reviewAvg(t, a.key), best: 'max' }));
+  const total = { key: 'rv_total', name: `レビュー合計/${reviews.axes.length * MAX_SCORE}`, axis: 'total', value: (t) => reviewAvg(t, 'total'), best: 'max' };
+  COLUMNS = [...BASE_COLUMNS, ...axisCols, total];
+}
 
 // ===== 状態 =====
 const state = { layout: '3x2', active: 0, expanded: null, sortKey: null, sortDir: 1, modal: null };
 let targets = [];
 let panes = [];
 let dataUrl = DEFAULT_DATA;
+let reviews = null;
 
 const $ = (id) => document.getElementById(id);
 const grid = $('grid');
@@ -241,6 +271,15 @@ const fmtK = (v) => (isNum(v) ? `${(v / TOKENS_PER_K).toFixed(1)}k` : '—');
 function accRate(t) {
   const a = t.acceptance;
   return a && isNum(a.total) && a.total > 0 ? a.passed / a.total : null;
+}
+
+function reviewOf(t) {
+  return reviews && reviews.targets[t.id] ? reviews.targets[t.id] : null;
+}
+function reviewAvg(t, axis) {
+  const r = reviewOf(t);
+  const v = r && r.average ? r.average[axis] : null;
+  return isNum(v) ? v : null;
 }
 
 function showError(message) {
@@ -297,6 +336,19 @@ function accCell(t) {
   return wrap;
 }
 
+function totalCell(v) {
+  if (v === null) return '—';
+  const max = reviews.axes.length * MAX_SCORE;
+  const wrap = el('div');
+  wrap.append(el('span', '', `${v.toFixed(1)}/${max}`));
+  const track = el('div', 'bar-track');
+  const bar = el('div', 'bar');
+  bar.style.width = `${Math.min(100, (v / max) * 100)}%`;
+  track.append(bar);
+  wrap.append(track);
+  return wrap;
+}
+
 function renderSummary() {
   const table = el('table', 'tbl');
   const headRow = el('tr');
@@ -328,6 +380,10 @@ function renderSummary() {
     summaryCell(row, cols.lines, t.lines ? `${t.lines.main} / ${t.lines.test}` : '—', best, !t.lines);
     summaryCell(row, cols.cost, fmtUsd(t.cost && t.cost.total), best, !(t.cost && isNum(t.cost.total)));
     summaryCell(row, cols.min, t.cost && isNum(t.cost.minutes) ? t.cost.minutes.toFixed(1) : '—', best, !(t.cost && isNum(t.cost.minutes)));
+    COLUMNS.filter((c) => c.axis).forEach((c) => {
+      const v = reviewAvg(t, c.axis);
+      summaryCell(row, c, c.axis === 'total' ? totalCell(v) : (v === null ? '—' : v.toFixed(1)), best, v === null);
+    });
     tbody.append(row.tr);
   });
   table.append(thead, tbody);
@@ -406,8 +462,70 @@ function buildSourceBody(pane, t) {
   return wrap;
 }
 
+function scoreBar(v) {
+  const track = el('div', 'bar-track');
+  const bar = el('div', 'bar');
+  bar.style.width = `${isNum(v) ? Math.min(100, (v / MAX_SCORE) * 100) : 0}%`;
+  track.append(bar);
+  return track;
+}
+
+function listBlock(title, items) {
+  const box = el('div');
+  box.append(el('div', 'rv-h', title));
+  const ul = el('ul', 'rv-list');
+  (items.length ? items : ['—']).forEach((x) => ul.append(el('li', '', x)));
+  box.append(ul);
+  return box;
+}
+
+function buildReviewBody(pane, t) {
+  if (!reviews) return el('p', 'muted', 'レビュー未実施');
+  const r = reviewOf(t);
+  if (!r) return el('p', 'muted', 'この構成のレビューはありません。');
+  const by = r.byReviewer || {};
+  const names = reviews.reviewers.filter((n) => by[n]);
+  const wrap = el('div');
+  reviews.axes.forEach((a) => {
+    const row = el('div', 'rv-axis');
+    const avg = reviewAvg(t, a.key);
+    row.append(el('span', '', a.label), scoreBar(avg));
+    const meta = el('div', 'rv-meta');
+    meta.append(el('span', 'rv-avg', avg === null ? '—' : avg.toFixed(1)));
+    const scores = names.map((n) => by[n].scores[a.key]).filter(isNum);
+    meta.append(el('span', '', ' ' + names.map((n) => `${n} ${isNum(by[n].scores[a.key]) ? by[n].scores[a.key] : '—'}`).join(' / ')));
+    if (scores.length >= 2 && Math.max(...scores) - Math.min(...scores) >= SPLIT_THRESHOLD) meta.append(el('span', 'rv-split', '評価割れ'));
+    row.append(meta);
+    wrap.append(row);
+  });
+  const total = reviewAvg(t, 'total');
+  wrap.append(el('div', 'rv-h', `平均合計 ${total === null ? '—' : total.toFixed(1)}/${reviews.axes.length * MAX_SCORE}`));
+  if (names.length === 0) return wrap;
+
+  if (!names.includes(pane.reviewer)) pane.reviewer = names[0];
+  const toggle = el('div', 'rv-toggle');
+  names.forEach((n) => {
+    const b = el('button', 'tab-btn', n);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(n === pane.reviewer));
+    b.addEventListener('click', () => { pane.reviewer = n; renderCardBody(pane, t); });
+    toggle.append(b);
+  });
+  wrap.append(toggle);
+  const rv = by[pane.reviewer];
+  reviews.axes.forEach((a) => {
+    const c = el('div', 'rv-comment');
+    c.append(el('b', '', `${a.label} ${isNum(rv.scores[a.key]) ? rv.scores[a.key] : '—'}`), el('span', '', rv.comments[a.key] || ''));
+    wrap.append(c);
+  });
+  wrap.append(listBlock('強み', rv.strengths), listBlock('弱み', rv.weaknesses));
+  wrap.append(el('div', 'rv-h', '総評'), el('p', 'rv-summary', rv.summary));
+  return wrap;
+}
+
 function renderCardBody(pane, t) {
   const builders = {
+    review: () => buildReviewBody(pane, t),
     accept: () => buildAcceptBody(t),
     sample: () => buildPre(t.sample, '実行例がありません。'),
     source: () => buildSourceBody(pane, t),
@@ -439,7 +557,7 @@ function buildPanes() {
     const head = el('div', 'cell-head');
     head.append(label, cost);
 
-    const pane = { cell, body: el('div', 'card-body'), tabKey: 'accept', currentPath: null, sourceView: null, tabButtons: [] };
+    const pane = { cell, body: el('div', 'card-body'), tabKey: 'review', reviewer: null, currentPath: null, sourceView: null, tabButtons: [] };
     const tabRow = el('div', 'card-tabs');
     CARD_TABS.forEach((ct) => {
       const b = el('button', 'tab-btn', ct.label);
@@ -575,6 +693,44 @@ function validate(json) {
   return json.targets.filter((t) => t && typeof t === 'object').map((t) => ({ ...t, id: String(t.id ?? ''), label: String(t.label ?? t.id ?? '') }));
 }
 
+const strArr = (v) => (Array.isArray(v) ? v.map(String) : []);
+const numMap = (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).filter(([, x]) => isNum(x)));
+const strMap = (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).map(([k, x]) => [k, String(x)]));
+
+function validateReviews(json) {
+  if (!json || !Array.isArray(json.axes) || !json.targets || typeof json.targets !== 'object') throw new Error('axes / targets がありません');
+  const axes = json.axes.filter((a) => a && a.key).map((a) => ({ key: String(a.key), label: String(a.label ?? a.key) }));
+  const reviewers = strArr(json.reviewers);
+  const out = {};
+  Object.entries(json.targets).forEach(([id, r]) => {
+    if (!r || typeof r !== 'object') return;
+    const byReviewer = {};
+    Object.entries(r.byReviewer || {}).forEach(([n, v]) => {
+      if (!v || typeof v !== 'object') return;
+      byReviewer[n] = { scores: numMap(v.scores), comments: strMap(v.comments), strengths: strArr(v.strengths), weaknesses: strArr(v.weaknesses), summary: String(v.summary ?? '') };
+    });
+    out[id] = { average: numMap(r.average), byReviewer };
+  });
+  return { axes, reviewers, method: json.method ? String(json.method) : '', targets: out };
+}
+
+async function loadReviews() {
+  const param = new URLSearchParams(location.search).get('reviews');
+  const url = param && /^[\w.\-]+\.json$/.test(param) ? param : DEFAULT_REVIEWS;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    reviews = validateReviews(await res.json());
+  } catch (err) {
+    console.info(`レビューデータ（${url}）なし: ${err.message}`);
+    reviews = null;
+  }
+  buildColumns();
+  const m = $('method');
+  m.textContent = reviews ? reviews.method : 'レビュー未実施';
+  m.title = m.textContent;
+}
+
 async function load() {
   const param = new URLSearchParams(location.search).get('data');
   dataUrl = param && /^[\w.\-]+\.json$/.test(param) ? param : DEFAULT_DATA;
@@ -593,6 +749,7 @@ async function load() {
     showError(`結果データ（${dataUrl}）を読み込めませんでした。\nファイルが存在するか、HTTP サーバー経由で開いているか確認してください。\n詳細: ${err.message}`);
     return;
   }
+  await loadReviews();
   state.active = 0;
   state.expanded = null;
   renderSummary();
