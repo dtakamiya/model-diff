@@ -1,0 +1,417 @@
+{
+  "generatedAt": "2026-10-23T23:53:23+09:00",
+  "method": "匿名化した6実装を2名のレビュアー（Opus・Sonnet）が独立採点。各軸1〜10点、平均を表示",
+  "axes": [
+    {
+      "key": "design",
+      "label": "設計"
+    },
+    {
+      "key": "errors",
+      "label": "エラー処理"
+    },
+    {
+      "key": "readability",
+      "label": "可読性"
+    },
+    {
+      "key": "tests",
+      "label": "テストの質"
+    }
+  ],
+  "reviewers": [
+    "opus",
+    "sonnet"
+  ],
+  "targets": {
+    "solo-haiku": {
+      "average": {
+        "design": 8.0,
+        "errors": 6.0,
+        "readability": 8.5,
+        "tests": 7.5,
+        "total": 30.0
+      },
+      "byReviewer": {
+        "opus": {
+          "scores": {
+            "design": 8,
+            "errors": 6,
+            "readability": 8,
+            "tests": 7
+          },
+          "comments": {
+            "design": "cli/domain/storage の 3 パッケージで依存が一方向、Ledger 集約がコンストラクタで ID 重複・next_id 整合を検証し（Ledger.java:30-39）、金額は銭単位 long の Money に集約、CSV 行変換（CsvCodec）とファイル IO（CsvLedgerStore）も分離されている。Ledger が add/delete で自身を書き換える可変設計である点が 単発 Opus の不変レコード＋サービス構成に一歩及ばない。",
+            "errors": "ExitCode enum＋単一 LedgerException（ExitCode.java:6, LedgerException.java:7）と Optional で不正を返す FieldRules により終了コードの決まり方が明快で、想定外例外の catch-all もある（App.java:49-53）。一方で保存が Files.writeString の直書きで原子的置換がなく（CsvLedgerStore.java:59）、--data の不正パスを引数検証より前に終了コード 1 にしてしまう（App.java:64）ため 指揮者 Opus＋Sonnet/5 より下。",
+            "readability": "メソッドが短く命名も具体的（InputParser.require、Report.line など）、日本語 Javadoc が要所にある。Optional 返却のルール群は例外を制御フローに使わず読みやすい。",
+            "tests": "FieldRules/Money のパラメータ化境界値、Ledger のドメイン単体、CsvCodec の分割異常系、AppTest の CLI 統合と層ごとに揃っている。ただし破損ファイルの CLI テストが 1 パターンのみ（AppTest.java:121-125）で、保存ファイルの全文一致や重複 ID 破損のテストがなく 指揮者 Sonnet＋Haiku/5/6 より網羅が薄い。"
+          },
+          "strengths": [
+            "Ledger.java:30-39 復元時に ID 重複と next_id 以上の ID をドメイン側で拒否し、不変条件を集約に閉じ込めている",
+            "FieldRules.java:31-84 / Money.java:23-33 が Optional を返す共有ルールで、CLI（InputParser）と CSV 読込（CsvCodec.decode）が同じ規則を例外の付け替えなしで再利用",
+            "ExitCode.java:6-24 終了コードを enum に集約し、LedgerException が ExitCode を持つ単純で明快な設計",
+            "Summary.java:38-58 集計をドメインの値オブジェクト（record）として切り出し、Math.addExact でオーバーフローも検出"
+          ],
+          "weaknesses": [
+            "CsvLedgerStore.java:59 Files.writeString で直接上書きしており、書き込み途中の失敗で既存データが壊れうる（一時ファイル＋置換なし）",
+            "App.java:64 --data の Path 変換をコマンド引数検証より先に行うため、不正パス＋不正引数の組合せで終了コード 2 ではなく 1 になる",
+            "Ledger.java:47-51 nextId が Long.MAX_VALUE のときの採番ガードがない（指揮者 Sonnet＋Haiku/3/5/6 は対処済み）",
+            "AppTest.java:121-125 破損ファイルの CLI テストが列不足 1 パターンのみで、保存形式の全文一致検証もない（AppTest.java:67-68 は先頭行のみ確認）"
+          ],
+          "summary": "層分けとドメイン不変条件の置き場所が適切で読みやすい良実装。非原子的な保存と、テストの I/O 異常系の薄さが上位 2 実装との差。"
+        },
+        "sonnet": {
+          "scores": {
+            "design": 8,
+            "errors": 6,
+            "readability": 9,
+            "tests": 8
+          },
+          "comments": {
+            "design": "domain/storage/cli に分割し、Money(銭 long)・FieldRules・Ledger 集約・Summary が責務ごとに独立。FieldRules を CLI 検証と CSV 読込で共有し依存の向きも一方向。Ledger が復元時に ID 不変条件(重複・nextId 以上)を検証する。",
+            "errors": "ExitCode enum と単一の LedgerException(exitCode) で終了コード体系が一目で分かり、RuntimeException の catch-all で 'error:' 形式を守る。ただし save は Files.writeString で直接上書きしており、書込み途中の失敗で既存データを壊しうる(一時ファイル+原子的置換なし)。",
+            "readability": "各クラスが 20〜150 行で関数が短く、Optional 返しの規則クラス・require ヘルパなど Java らしい。コメントは日本語で要点のみ。App.execute のリスト操作(subList.clear)がやや手続き的な程度。",
+            "tests": "FieldRulesTest/MoneyTest は ParameterizedTest で境界値(12 桁、Long 上限、0.00 等)を網羅。LedgerTest が ID 非再利用・並び順・同額カテゴリ順・復元時 ID 検証、CsvCodecTest が往復と不正行、AppTest が CLI 統合と終了コード。ファイルへの save/load 往復や stderr 1 行の検証が弱い。"
+          },
+          "strengths": [
+            "domain/Ledger.java:30-39 コンストラクタで ID 重複・nextId 超過を IllegalArgumentException で拒否し、不変条件をドメイン側で守る",
+            "domain/FieldRules.java:31-84 規則を Optional で返し CLI(cli/InputParser.java)と CSV(storage/CsvCodec.java:44-51)で共通化、重複なし",
+            "ExitCode.java:6-13 + LedgerException.java:7-19 終了コードの対応が列挙型で明快、cli/App.java:46-53 で一元変換",
+            "domain/Summary.java:47-50 Math.addExact でオーバーフローを握りつぶさず検出"
+          ],
+          "weaknesses": [
+            "storage/CsvLedgerStore.java:57-63 save が直接上書きで原子的でない(途中失敗でファイル破損の恐れ)",
+            "cli/App.java:49-52 想定外 RuntimeException を IO エラー(1)に潰す。addExact の ArithmeticException などが原因不明の 'IO エラー' になる",
+            "domain/Ledger.java:22-23,79-81 可変集約で add/delete が内部状態を変更(不変性は限定的)",
+            "tests: storage 層(ファイル往復・save 失敗時の既存データ保持)の単体テストが無い"
+          ],
+          "summary": "責務分割・読みやすさ・規則の共有が最も整ったクリーンな実装。唯一の大きな減点は非原子的な保存。"
+        }
+      }
+    },
+    "conductor-sonnet-haiku": {
+      "average": {
+        "design": 7.0,
+        "errors": 6.0,
+        "readability": 7.0,
+        "tests": 8.0,
+        "total": 28.0
+      },
+      "byReviewer": {
+        "opus": {
+          "scores": {
+            "design": 7,
+            "errors": 6,
+            "readability": 7,
+            "tests": 8
+          },
+          "comments": {
+            "design": "sealed interface Command（Command.java:12）で「解析・検証」と「実行」を型で分け、Ledger/Summary/ReportFormatter/LedgerRepository/CsvCodec と責務は揃っている。単一パッケージにフラット配置で、ドメインの Ledger.add が IO 例外の DataFileException を投げる（Ledger.java:44-46）など層の境界が 単発 Haiku/6 より甘い。",
+            "errors": "例外 3 種を Main で終了コードへ写像し、メッセージ内の改行も 1 行化している（Main.java:56-73）。ただし保存は直書きで原子性がなく（LedgerRepository.java:62）、CsvCodec が DataFileException、Validator の InputException を読込時に catch して付け替える（LedgerRepository.java:104-122）など例外の役割が層をまたいで混線している。",
+            "readability": "Javadoc と日本語コメントが丁寧で、CommandParser の各 parseXxx も短い。Commands.execute の instanceof 連鎖と到達不能の IllegalStateException（Commands.java:29-56）、setScale(2) が 4 か所に散在（Ledger.java:49, LedgerRepository.java:135, Summary.java:59-67, ReportFormatter.java:22）する点で 単発 Haiku/6 より一段下。",
+            "tests": "Validator のパラメータ化境界値、Summary 単体、Repository の保存全文一致＋往復（LedgerRepositoryTest.java:43-64）、末尾削除・全件削除後の採番、ヘッダー欠落・ID 矛盾・重複・金額 0 の破損（:116-123）、CLI 統合と網羅性が高い。stderr が 1 行であることの検証がなく、assertEquals(true, …) が混じる（MainIntegrationTest.java:74）点で 指揮者 Opus＋Haiku に及ばない。"
+          },
+          "strengths": [
+            "Command.java:12-30 sealed interface＋record で検証済みコマンドを表現し、CommandParser.java:44-79 で全引数検証をファイル読込前に完結",
+            "LedgerRepository.java:69-99 破損データを行番号付きで報告し、ID 重複・next_id 以上の ID を検出",
+            "Main.java:69-73 エラーメッセージ中の改行・タブを空白に置換して必ず 1 行に収めている",
+            "LedgerRepositoryTest.java:43-64 保存ファイルの全文一致と再読込の等価性を同時に検証する往復テスト"
+          ],
+          "weaknesses": [
+            "LedgerRepository.java:62 Files.writeString で直接上書きしており、IO 失敗時にデータファイルを壊しうる",
+            "Ledger.java:44-46 ドメイン層が ID 上限で DataFileException（ファイル IO エラー）を投げており、例外の意味と層が一致しない",
+            "Commands.java:29-56 sealed 型を使いながら instanceof 連鎖＋IllegalStateException のフォールバックで、コマンド追加時の網羅性をコンパイラが保証しない",
+            "Ledger.java:49 / LedgerRepository.java:135 / Summary.java:59-67 / ReportFormatter.java:22 スケール 2 への正規化が分散し、ReportFormatter では不要な HALF_UP 丸めまで持つ"
+          ],
+          "summary": "検証と実行の分離とテストの網羅は優秀だが、フラット構成で例外が層をまたいで流用され、保存も非原子的。総合では 単発 Haiku とほぼ同水準。"
+        },
+        "sonnet": {
+          "scores": {
+            "design": 7,
+            "errors": 6,
+            "readability": 7,
+            "tests": 8
+          },
+          "comments": {
+            "design": "sealed Command + CommandParser(検証)→Commands(実行)→LedgerRepository/CsvCodec/ReportFormatter と段階が明確で、Summary/Ledger は BigDecimal の値型。一方でパッケージが全部フラットで、Commands.execute が instanceof 連鎖(Java 17 の制約はあるが、sealed の利点を活かし切れていない)。",
+            "errors": "InputException/DataFileException/NotFoundException を Main.run で終了コードへ対応付け、定数も整理。検証はパーサ段で完結し、CSV 読込時も Validator を再利用、ID 重複・nextId 超過を行番号つきで検出。保存は直接上書きで非原子的。Ledger.add が ID 枯渇を DataFileException で出す点は意味的にやや不自然。",
+            "readability": "Javadoc とコメントが丁寧で命名も明快。Commands の instanceof 連鎖と、Main の EXIT_* 定数・例外 catch の並びがやや冗長。flat package のためファイル数 15 が一覧しづらい。",
+            "tests": "ValidatorTest・SummaryTest・CsvCodecTest・LedgerRepositoryTest・MainIntegrationTest の 5 クラスで、Repository の保存書式(正確な文字列)・往復・ID 非再利用・全件削除後・親ディレクトリ無し・破損データを検証。@DisplayName で意図が明確。失敗時のデータ保全テストは無い。"
+          },
+          "strengths": [
+            "LedgerRepositoryTest.java:43-64 保存文字列を厳密比較しつつ往復も確認、:66-98 末尾削除/全件削除後の ID 継続を永続化込みで検証",
+            "CommandParser.java:44-79 検証を解析段に集約し Command レコードを生成、データ読込前検証(spec)を構造で保証",
+            "LedgerRepository.java:69-99 ID 重複・nextId 超過・行番号つき破損メッセージ",
+            "Main.java:69-74 エラー本文の改行を潰して必ず 1 行の 'error:' にする"
+          ],
+          "weaknesses": [
+            "LedgerRepository.java:60-66 save が非原子的な上書き",
+            "Commands.java:29-56 instanceof 連鎖で sealed の網羅性チェックが効かず、拡張時に落とし穴",
+            "全クラスがフラットな ledger パッケージ直下で層の境界がファイル名頼み",
+            "Ledger.java:44-46 ID 枯渇時に DataFileException(IO エラー扱い)を投げており例外の意味がずれる"
+          ],
+          "summary": "段階分けと検証の位置は良好でテストも手厚いが、非原子的保存とフラット構成・instanceof 連鎖で上位 2 実装には一歩届かない。"
+        }
+      }
+    },
+    "conductor-opus-sonnet": {
+      "average": {
+        "design": 5.0,
+        "errors": 7.5,
+        "readability": 6.0,
+        "tests": 6.0,
+        "total": 24.5
+      },
+      "byReviewer": {
+        "opus": {
+          "scores": {
+            "design": 5,
+            "errors": 8,
+            "readability": 6,
+            "tests": 6
+          },
+          "comments": {
+            "design": "CommandLine で検証済み Command を組み立てる流れと CsvCodec/LedgerRepository の分離は良いが、SummaryCommand が集計・並べ替え・書式化を 1 メソッドで抱え（SummaryCommand.java:19-50）、ListCommand も整形を内包するため、集計ドメインと出力書式の層がない。LedgerData.entries() が内部の可変 ArrayList をそのまま返し（LedgerData.java:26-28）カプセル化が漏れている点で 指揮者 Opus＋Haiku より下。",
+            "errors": "同一ディレクトリの一時ファイルに書いて move し、失敗時は一時ファイルを掃除する（LedgerRepository.java:41-59）ほか、不正 UTF-8 を REPORT で検出し（:26-31）、catch-all とメッセージの 1 行化もある（Main.java:33-42）。終了コードが int 定数で、Validator の入力例外を CSV 読込で付け替える（CsvCodec.java:81-88）点が 単発 Opus の型付き設計より劣るが、データ保全で上回る。",
+            "readability": "クラスは小さいが a / f / e / cl / s といった 1〜2 文字の変数名が多く（CommandLine.java:54-85, CsvCodec.java:76-89）、長い StringBuilder 連鎖が続く。コメントも最小限で、record で済む AddCommand などをフィールド＋コンストラクタの定型コードで書いている（AddCommand.java:7-20）。",
+            "tests": "使用例の保存ファイル全文一致（MainTest.java:52-54）、存在しない ID 削除でファイル不変（:173-179）、全件削除後の採番など要点は押さえている。ただしテストクラスが 2 つしかなく、1 テストに 12 個の assert を詰めたり（:82-96）ループで境界値を回したり（:99-114）しており、失敗箇所の特定性と独立性が 単発 Haiku/2/5/6 より低い。"
+          },
+          "strengths": [
+            "LedgerRepository.java:41-59 createTempFile で同一ディレクトリに書いてから置換し、失敗時は一時ファイルを削除するため IO 失敗でデータを壊さない",
+            "LedgerRepository.java:26-31 UTF-8 デコーダを REPORT 設定にして不正バイト列を破損として扱う",
+            "CsvCodec.java:65-72 ID の重複と next_id 以上の ID を破損として検出",
+            "MainTest.java:173-179 存在しない ID の delete でファイル内容が変化しないことまで検証"
+          ],
+          "weaknesses": [
+            "SummaryCommand.java:19-50 集計・並べ替え・出力書式を 1 メソッドに混在させ、集計結果のドメイン型がない",
+            "LedgerData.java:26-28 内部の可変リストをそのまま公開しており、呼び出し側から ID 採番と無関係に書き換えられる",
+            "ListCommand.java:11 / CommandLine.java:65 月指定なしを null で表現しており Optional を使わない",
+            "MainTest.java:82-96 1 テストに 12 個の終了コード assert を連ねており、失敗時にどのケースか特定しにくくテストの独立性も低い"
+          ],
+          "summary": "IO 失敗時の保全など堅牢性は上位だが、コマンドクラスに集計と書式化が混在し命名も簡素すぎる。テストは要点を突くが構造が粗い。"
+        },
+        "sonnet": {
+          "scores": {
+            "design": 5,
+            "errors": 7,
+            "readability": 6,
+            "tests": 6
+          },
+          "comments": {
+            "design": "Command インターフェース+各コマンドクラスの形は分かりやすいが、SummaryCommand/ListCommand が集計・整列・書式化を直接持ち、ドメインロジックと出力が混在。month を null で表すなど設計が粗く、LedgerData.entries() は可変リストを公開。Money は薄いユーティリティ。",
+            "errors": "LedgerRepository.save が同ディレクトリの一時ファイル+Files.move(REPLACE_EXISTING)で置換し失敗時に一時ファイルを掃除、読込は UTF-8 を REPORT で厳密デコード。LedgerException(code) の factory で体系も明快、catch-all あり。ただし add の末尾 '--data' が memo として通る(spec は入力エラー)、一時ファイルのパーミッション(0600)で既存モードが変わる点、ATOMIC_MOVE 不使用が惜しい。",
+            "readability": "全体に短く読めるが、変数名が 'e','f','cl','m' と簡素で、メッセージが英語、コメントも疎。switch の代入形式や null 許容引数が Java らしさを下げる。",
+            "tests": "MainTest(統合)と CsvCodecTest の 2 クラスのみ。統合テストは仕様例・検証ルール・負の残高・ID 非再利用・不変の NotFound・I/O エラーまで広く押さえるが、ループ中心で失敗箇所が見えにくく、Validator/Money/集計/Repository の単体テストが無い。"
+          },
+          "strengths": [
+            "LedgerRepository.java:40-58 一時ファイル+move+後始末で非破壊保存、:26-31 不正 UTF-8 を拒否",
+            "LedgerException.java:4-34 終了コード定数と factory(input/io/notFound)で例外設計が簡潔",
+            "MainTest.java:174-179 NotFound 時にファイル内容が不変であることを検証、:52-54 CSV の実ファイル内容を厳密比較",
+            "CsvCodec.java:44-74 ID 重複・nextId 超過を検出し行番号つき破損エラー"
+          ],
+          "weaknesses": [
+            "SummaryCommand.java:19-50 / ListCommand.java:17-28 コマンド内に集計・整列・書式化が同居しドメイン層が無い",
+            "CommandLine.java:58-60 add の末尾引数 '--data' が memo として受理される(spec: コマンド後ろの --data は入力エラー)",
+            "ListCommand.java:11-18 month を null で表現、LedgerData.java:26-28 が可変リストを直接公開",
+            "tests: MainTest に集中、Validator/Money/Summary の境界値単体テスト無し・ループ assert が多い"
+          ],
+          "summary": "保存の原子性など I/O 面の配慮は実装 1〜6 の中で上位だが、ドメインの不在とテストの偏りが足を引っ張る。"
+        }
+      }
+    },
+    "solo-sonnet": {
+      "average": {
+        "design": 4.0,
+        "errors": 4.0,
+        "readability": 5.0,
+        "tests": 5.0,
+        "total": 18.0
+      },
+      "byReviewer": {
+        "opus": {
+          "scores": {
+            "design": 4,
+            "errors": 4,
+            "readability": 5,
+            "tests": 5
+          },
+          "comments": {
+            "design": "Commands クラスが引数検証・読込・集計・書式化をすべて抱える（Commands.java:20-100）。CSV 読込は Validators を使わず日付・ID・金額の正規表現を重複定義し（CsvCodec.java:12-15 と Validators.java:10-12）、月を String のまま前方一致で比較する（Commands.java:113-115）など型によるドメイン表現が弱い。",
+            "errors": "検査例外 LedgerException（LedgerException.java:4）で終了コードを運ぶ方針は明確だが、読込時に ID 重複を検出せず（CsvCodec.java:61-64）、カテゴリのタブや memo の制御文字も検査しない（CsvCodec.java:76）ため、壊れたファイルを受け入れて list の 6 列 TSV を崩しうる。Main は LedgerException しか捕捉せず（Main.java:26-33）想定外例外でスタックトレースが出るうえ、保存も非原子的（LedgerRepository.java:34）で 6 実装中最も穴が多い。",
+            "readability": "メソッドは短めだが、stream の forEach 内で StringBuilder に副作用で追記する長い連鎖（Commands.java:41-49）や、null を返す API（Money.java:14, EntryType.java:19）が多い。同額カテゴリの並びを TreeMap と安定ソートの組合せに頼りコメントで補う（Commands.java:76-77, 96-98）など、意図が読み取りにくい。",
+            "tests": "CSV の厳密な往復一致（CsvCodecTest.java:26-28）や Money 単体はあるが、入力検証は MainTest の 1 テストに 14 個の assert を詰めたもの（MainTest.java:71-87）に依存し、Validators の単体テストがない。重複 ID・制御文字入りファイルなど実装の弱点を突く異常系がなく、件数・観点とも 6 実装中最も少ない。"
+          },
+          "strengths": [
+            "Money.java:14-33 金額を銭単位 long で扱い、負数整形まで含めて浮動小数を排除",
+            "LedgerException.java:4-38 検査例外にすることで、各層が終了コード付きエラーを投げうることをシグネチャで明示",
+            "CsvCodecTest.java:11-28 仕様例のファイルを decode→encode して完全一致することを検証する往復テスト"
+          ],
+          "weaknesses": [
+            "CsvCodec.java:61-64 / 76 読込時に ID 重複を検出せず、category のタブ・memo の制御文字も検査しないため、手編集で壊れたファイルを正常として受け入れる",
+            "Commands.java:20-100 1 クラスに引数検証・永続化呼び出し・集計・出力整形が集中しており責務が分離されていない",
+            "CsvCodec.java:12-15 と Validators.java:10-12 日付・ID の正規表現と検証ロジックが重複定義され、規則変更時にずれる危険がある",
+            "Main.java:26-33 LedgerException 以外を捕捉せず、想定外の実行時例外で「error: 」1 行の出力契約が崩れる"
+          ],
+          "summary": "受け入れテストは通るが、責務が Commands に集中し、読込時検証の欠落や重複定義など保守上の問題が最も多い。テストも最小限。"
+        },
+        "sonnet": {
+          "scores": {
+            "design": 4,
+            "errors": 4,
+            "readability": 5,
+            "tests": 5
+          },
+          "comments": {
+            "design": "Commands が引数検証・読込・業務ロジック・集計・TSV 書式化を 1 クラス(116 行)に抱える。月を String で持ち startsWith('yyyy-MM-') で判定、日付/金額の検証が Validators と CsvCodec で二重実装、チェック例外 LedgerException が stream にも波及。Money(銭 long)と Ledger の分離は妥当。",
+            "errors": "LedgerException(code) の factory は明快だが、Main.run は LedgerException しか捕えず想定外の RuntimeException は stderr に 'error:' 形式でなくスタックトレース(spec 違反リスク)。保存は非原子的、CSV 読込で ID 重複を検出せず、add の ID/金額オーバーフロー検査も無い。add の末尾 '--data' も memo として通る。",
+            "readability": "コメントはあるが、Commands.summary が約 35 行で TreeMap+安定ソートの暗黙依存(コメントで説明)、Long の null 返し(Money.parsePositive)、'f','e','cur' などの短名、旧式 switch。全体として読めるが Java らしさ・分割度は低め。",
+            "tests": "MainTest(統合 7)・CsvCodecTest・MoneyTest の 3 クラス。仕様例、負の残高、並び順、0.10×3、各エラー終了コードを押さえるが、for ループにまとめた不正値群は失敗箇所が特定しづらく、Validators・Ledger・Repository の単体テストや保存書式のファイル内容検証が薄い。"
+          },
+          "strengths": [
+            "Money.java:14-33 銭 long で金額を扱い整形/解析が小さく明確",
+            "CsvCodecTest.java:26-27 往復一致(roundTripsExactly)と :36-41 全件削除後の nextId 保持を直接検証",
+            "Main.java:26-34 LedgerException を一箇所で終了コードへ変換",
+            "MoneyTest.java:25-31 負数書式(-0.05 等)の境界を押さえる"
+          ],
+          "weaknesses": [
+            "Commands.java:20-116 検証・読込・集計・書式化が混在し 1 クラスに責務が集中",
+            "Commands.java:113-115 月判定が文字列 startsWith、Validators.month が String を返す(型安全でない)",
+            "CsvCodec.java:14-15,82-93 と Validators/Money に日付・金額検証が重複(DRY 違反)",
+            "Main.java:26-34 想定外 RuntimeException を捕えず error: 形式を破る/LedgerRepository.java:34 非原子的保存/CsvCodec.decode に ID 重複検出無し"
+          ],
+          "summary": "動作は正しいが責務集中・型の粗さ・例外ハンドリングの穴が目立つ、6 実装中で最も改善余地が大きい。"
+        }
+      }
+    },
+    "conductor-opus-haiku": {
+      "average": {
+        "design": 6.0,
+        "errors": 8.0,
+        "readability": 7.0,
+        "tests": 9.0,
+        "total": 30.0
+      },
+      "byReviewer": {
+        "opus": {
+          "scores": {
+            "design": 6,
+            "errors": 8,
+            "readability": 7,
+            "tests": 9
+          },
+          "comments": {
+            "design": "App（CLI）→ LedgerService（ユースケース）→ LedgerFile（永続化）と OutputFormatter の分担は妥当で、LedgerData を record にして add/delete で新しいインスタンスを作る不変設計（LedgerService.java:27-59）も良い。ただし収支種別が enum でなく String で（Entry.java:7, LedgerService.java:18）、LedgerFile が CSV 構文解析とファイル IO を 242 行に同居させている点が 単発 Haiku/2/6 より劣る。",
+            "errors": "一時ファイル＋ATOMIC_MOVE で置換し失敗時は後始末（LedgerFile.java:64-74）、不正 UTF-8 を REPORT で検出（:77-94）、Path 変換を引数検証の後に回して終了コードの優先順位を守る（App.java:137-151）など堅牢。catch-all がなく想定外例外で 1 行出力の契約が崩れうる（App.java:33-45）ことと、一時ファイル名が固定（LedgerFile.java:66）で既存ファイルを上書きしうる点が減点。",
+            "readability": "各クラスに日本語 Javadoc があり、Validator の各メソッドも短く意図が明確。App が static メソッドの集合で、LedgerFile.java が 242 行と長めな点、Money.format に不要な HALF_UP 丸めを持つ点（Money.java:13）で 単発 Haiku/6 よりやや劣る。",
+            "tests": "assertFails が「標準出力が空・stderr が error: で始まる・ちょうど 1 行」を毎回検証し（AppTest.java:56-61）、1 テスト 1 観点で独立性が高い。NUL 入りパスでの終了コード優先順位（:226-234）、日本語・記号の往復（LedgerFileTest.java:51-60）、ヘッダー・列数・クォート異常を個別に確認しており 6 実装中最も網羅的だが、重複 ID の破損ケースだけは未検証。"
+          },
+          "strengths": [
+            "LedgerFile.java:64-74 一時ファイルに書いて ATOMIC_MOVE で置換し、失敗時は一時ファイルを削除するため IO 失敗で既存データを壊さない",
+            "App.java:137-151 --data の Path 変換をコマンド引数の検証後に行い、仕様の「引数エラーが最優先」を不正パスでも守る（AppTest.java:231-234 で検証）",
+            "LedgerService.java:27-59 LedgerData record から新しいリストと新しい LedgerData を作って保存する不変スタイル",
+            "AppTest.java:50-61 assertOk / assertFails ヘルパーで全ケースの stdout・stderr・行数を一貫して検証"
+          ],
+          "weaknesses": [
+            "Entry.java:7 / Validator.java:44-48 / LedgerService.java:18 収支種別を String で持ち、enum による型安全がない",
+            "LedgerFile.java:26-242 CSV の構文解析・書式化とファイル IO が 1 クラスに同居し、CSV 単体での再利用・テストがしにくい",
+            "App.java:33-45 InputException / NotFoundException / LedgerIOException 以外を捕捉せず、想定外例外で出力契約が崩れうる",
+            "LedgerFile.java:66 一時ファイル名が「<データファイル>.tmp」固定で、同名の既存ファイルや同時実行と衝突しうる"
+          ],
+          "summary": "データ保全とテストの質は 6 実装中トップ級だが、種別が String である点など型設計に甘さが残る。"
+        },
+        "sonnet": {
+          "scores": {
+            "design": 6,
+            "errors": 8,
+            "readability": 7,
+            "tests": 9
+          },
+          "comments": {
+            "design": "UseCase(LedgerService)・Validator・OutputFormatter・LedgerFile・record 値型と役割は分かれ、package-private で隠蔽も適切。一方でフラットな単一パッケージ、type を String で持ち enum 化していない、LedgerFile が IO・CSV 解析・書式化を兼ね 242 行、summary が list() 経由で読込と結合する点が減点。",
+            "errors": "ATOMIC_MOVE の一時ファイル置換+失敗時掃除、UTF-8 厳密デコード、ディレクトリ検出、無効パス(NUL)・SecurityException の IO エラー化、ID 重複/超過を行番号つきで検出と網羅的。引数検証を先に行い Path 変換は検証後。欠点は App.run が RuntimeException 全般を捕えない点(想定外例外でスタックトレース)と、固定名 .tmp・ATOMIC_MOVE 非対応環境のフォールバック無し。",
+            "readability": "Javadoc が的確で定数(EXIT_*, OPT_*)・メソッド分割も良好。App.execute のループによる --data 解析や LedgerFile の長大な splitCsvLine はやや読み解きが要る。命名は全体に明快。",
+            "tests": "AppTest(26 ケース)は assertOk/assertFails ヘルパで終了コード・stdout 空・stderr 'error: ' 1 行を一貫して検証し、境界(Long 上限+1 の ID、NUL パス、ディレクトリ、破損、親無し、空ファイル、0.10×3、負の残高、同額カテゴリ順)を網羅。LedgerFileTest は保存書式・往復・多数の破損形式、ValidatorTest は境界値。独立性と読みやすさも高い。"
+          },
+          "strengths": [
+            "LedgerFile.java:60-74 一時ファイル+ATOMIC_MOVE+deleteQuietly で既存データを守る",
+            "AppTest.java:56-61 assertFails が stdout 空と stderr 1 行を毎回検証、:212-217 存在しない ID+ファイル無しで何も作らない",
+            "LedgerFile.java:42-57,86-93 ディレクトリ・不正 UTF-8・SecurityException を IO エラーへ統一",
+            "App.java:136-151 / AppTest.java:225-234 無効な --data パスの扱いと『引数エラー優先』を両方テスト"
+          ],
+          "weaknesses": [
+            "Entry.java:7 type を String で保持(EntryType enum なし)、LedgerService.java:18,68 で文字列比較",
+            "LedgerFile.java(242 行) が IO・パース・書式化・クォートを兼務",
+            "App.java:33-45 RuntimeException 全般の catch-all が無く、想定外例外で 'error:' 形式を破る",
+            "LedgerFile.java:66 固定名 .tmp、ATOMIC_MOVE 非対応時のフォールバック無し"
+          ],
+          "summary": "エラー処理とテストが突出して手堅い実装。モデリング(type が String)と LedgerFile の肥大が惜しい。"
+        }
+      }
+    },
+    "solo-opus": {
+      "average": {
+        "design": 9.0,
+        "errors": 7.0,
+        "readability": 8.0,
+        "tests": 7.5,
+        "total": 31.5
+      },
+      "byReviewer": {
+        "opus": {
+          "scores": {
+            "design": 9,
+            "errors": 7,
+            "readability": 8,
+            "tests": 8
+          },
+          "comments": {
+            "design": "cli/service/model/storage/error に分け、sealed Command record が自身の実行を持ち（Command.java:16-52）、LedgerData と MonthlySummary は List.copyOf で守った不変 record（LedgerData.java:13-15, MonthlySummary.java:18-20）、サービスは新しいデータを作って保存する（LedgerService.java:44-74）。実装が 1 つしかない LedgerRepository インタフェース（LedgerRepository.java:7）は今のところ使われておらずやや先回りだが、規模に対して許容範囲。",
+            "errors": "抽象 LedgerException のサブクラスが exitCode() を持つ型付き階層（error/LedgerException.java:7-19）で、FieldParser の IllegalArgumentException を CLI では InputException、読込では StorageException に境界で変換する（CommandParser.java:75-81, CsvLedgerRepository.java:56-60）設計が最も明快。保存が Files.writeString の直書きで原子的置換がない（CsvLedgerRepository.java:64-71）ため、指揮者 Opus＋Sonnet/5 より 1 点低い。",
+            "readability": "パッケージ名とクラス名が役割を表し、メソッドは短く Javadoc も的確。テストのテキストブロックによる期待値（LedgerAppTest.java:60-75）も読みやすい。メッセージが英語で、金額スケール 2 の不変条件が Entry ではなく FieldParser 側にしかない（Entry.java:19-25, CsvLedgerRepository.java:136）点は読み手が前提を追う必要がある。",
+            "tests": "assertError で終了コード・空 stdout・error: 接頭辞・1 行を検証し（LedgerAppTest.java:45-50）、破損ファイルはヘッダー欠落・列数・日付・クォート・ID 超過・ID 重複・空行をコメント付きで網羅（CsvLedgerRepositoryTest.java:62-77）、仕様例の往復一致もある。入力エラー 14 件を 1 テストに詰めている（LedgerAppTest.java:135-153）点で 指揮者 Opus＋Haiku の 1 観点 1 テストに一歩及ばない。"
+          },
+          "strengths": [
+            "Command.java:16-52 sealed interface＋record で検証済みコマンドとその実行を表現し、switch 式（CommandParser.java:27-33）と合わせて分岐が明快",
+            "error/LedgerException.java:7-19 と各サブクラス 終了コードを例外型自身が持つ検査例外階層で、CLI 層は LedgerException を 1 つ捕捉するだけで済む",
+            "LedgerData.java:13-15 / LedgerService.java:66-74 List.copyOf による不変 record と、削除時も新しい LedgerData を作る不変スタイル",
+            "CsvLedgerRepositoryTest.java:62-77 重複 ID・空行を含む 8 種の破損パターンを理由コメント付きで検証"
+          ],
+          "weaknesses": [
+            "CsvLedgerRepository.java:64-71 Files.writeString で直接上書きしており、書き込み途中の失敗でデータを壊しうる",
+            "Entry.java:19-25 null 検査のみで金額の正値・スケール 2 を型で保証せず、CsvLedgerRepository.java:136 と OutputFormatter.java:47 がその前提に依存",
+            "LedgerRepository.java:7-14 実装が 1 つでテストでもフェイクに差し替えておらず、インタフェースが現時点では過剰",
+            "LedgerAppTest.java:135-153 14 種の入力エラーを 1 テストに詰めており、1 件失敗すると残りが検証されない"
+          ],
+          "summary": "責務分割・不変性・例外設計のいずれも最も整った実装。原子的保存の欠如だけが明確な改善点。"
+        },
+        "sonnet": {
+          "scores": {
+            "design": 9,
+            "errors": 7,
+            "readability": 8,
+            "tests": 7
+          },
+          "comments": {
+            "design": "model/service/storage/cli/error の 5 層が依存方向どおりに整理され、LedgerRepository インターフェース、record の不変モデル(compact constructor で防御的コピー・null 検査)、MonthlySummary.balance() の導出、sealed Command と FieldParser の共有など模範的。リポジトリ interface や Command.execute はやや過剰気味だが許容範囲。",
+            "errors": "LedgerException 基底+InputException/StorageException/NotFoundException が exitCode() を多態で持ち、LedgerApp が一元変換、catch-all もあり、厳格 UTF-8、ID 重複/超過/空行を破損扱い、--data 空値も拒否と体系が最も明快。ただし save が Files.writeString で直接上書き(非原子的)、チェック例外で throws が多く冗長。",
+            "readability": "層・クラス名・Javadoc が明快でメソッド短小、Optional/record/sealed/switch 式など Java 17 の機能を適切に使う。throws 句の連鎖とメッセージの英語/日本語混在がやや気になる程度。",
+            "tests": "LedgerAppTest(text block で出力全体を厳密比較、Result record 一致、assertError で stdout 空・1 行)と CsvLedgerRepositoryTest(往復・破損 8 種・ディレクトリ・親無し)、FieldParserTest(境界値)で良質。ただし LedgerService/集計・並び順の単体テストが無く CLI 越しのみ、破損群はループ、保存失敗時のデータ保全テスト無し。"
+          },
+          "strengths": [
+            "error/LedgerException.java:7-19 + InputException/StorageException/NotFoundException の exitCode() 多態で終了コード体系が型で表現される",
+            "model/LedgerData.java:11-15, model/Entry.java:19-25, service/MonthlySummary.java:18-25 record+防御的コピーで不変性を徹底、balance() は導出",
+            "cli/CommandParser.java:22-34,75-81 sealed Command への変換と IllegalArgumentException→InputException の境界変換、検証をデータ読込前に完結",
+            "storage/CsvLedgerRepository.java:83-111 末尾改行を厳密に扱い空行・ID 重複・nextId 超過を拒否、storage/LedgerRepository.java インターフェースで差し替え可能"
+          ],
+          "weaknesses": [
+            "storage/CsvLedgerRepository.java:63-71 save が非原子的な上書き",
+            "LedgerService/CsvLedgerRepository/Command 全メソッドに throws チェック例外が連鎖し冗長、LedgerRepository は実装 1 つで interface がやや過剰",
+            "tests: LedgerService(整列・集計・削除)の単体テストが無く CLI 統合頼み、破損データ 8 種などをループで一括 assert",
+            "cli/Command.java:16-52 execute が文字列を返す構造で Command がフォーマッタに依存(層の境界がやや曖昧)"
+          ],
+          "summary": "層分割・不変性・例外設計が最も整った設計上の最優秀実装。非原子的保存と集計の単体テスト欠如が小さな減点。"
+        }
+      }
+    }
+  }
+}

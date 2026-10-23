@@ -1,0 +1,27 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+application {
+    mainClass = 'ledger.Main'
+    // 実行環境の既定文字コードに依存させない
+    applicationDefaultJvmArgs = ['-Dfile.encoding=UTF-8']
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
