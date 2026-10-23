@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-10-23T23:30:27+09:00",
+  "generatedAt": "2026-10-23T23:46:37+09:00",
   "targets": [
     {
       "id": "solo-haiku",
       "label": "単発 Haiku",
       "build": {
         "ok": true,
-        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 911ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+        "log": "> Task :compileJava UP-TO-DATE\n> Task :processResources NO-SOURCE\n> Task :classes UP-TO-DATE\n> Task :jar UP-TO-DATE\n> Task :compileTestJava UP-TO-DATE\n> Task :processTestResources NO-SOURCE\n> Task :testClasses UP-TO-DATE\n> Task :test UP-TO-DATE\n> Task :startScripts UP-TO-DATE\n> Task :installDist UP-TO-DATE\n\nBUILD SUCCESSFUL in 667ms\n6 actionable tasks: 6 up-to-date\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
       },
       "ownTests": {
         "total": 63,
@@ -15,8 +15,8 @@
         "skipped": 0
       },
       "acceptance": {
-        "total": 26,
-        "passed": 26,
+        "total": 49,
+        "passed": 49,
         "cases": [
           {
             "id": "A01",
@@ -171,6 +171,144 @@
           {
             "id": "A26",
             "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A27",
+            "name": "大量データ: 20,000 件の list が全件・日付昇順・同日は ID 数値昇順で正しい",
+            "pass": true,
+            "detail": "list: 20000 rows, 0.23s"
+          },
+          {
+            "id": "A28",
+            "name": "大量データ: 20,000 件の list --month と summary（カテゴリ別は金額降順・同額はカテゴリ昇順）が正しい",
+            "pass": true,
+            "detail": "list --month 0.19s, summary 0.15s (20000 rows)"
+          },
+          {
+            "id": "A29",
+            "name": "大量データ: 20,000 件のファイルへ add すると #next_id の値で採番され、既存の件数・内容が保たれる",
+            "pass": true,
+            "detail": "add 0.20s (20000 rows)"
+          },
+          {
+            "id": "A30",
+            "name": "大量データ: 20,000 件から delete しても残りは無傷で、次の add は削除前の続き番号",
+            "pass": true,
+            "detail": "delete 0.23s (20000 rows)"
+          },
+          {
+            "id": "A31",
+            "name": "金額の最大桁・合計精度（999999999999.99 の大量合計、0.01 の千件、-0.01 / 0.00 の残高）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A32",
+            "name": "金額入力の境界: 12 桁・先頭ゼロ・0.01 は有効、13 桁・全角/非ASCII数字・空白・指数・1d 等は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A33",
+            "name": "日付の境界: 閏日（2000/1904/2024-02-29 有効、1900/2100 は無効）・30 日月の 31 日・全角/空白付きは不正",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A34",
+            "name": "--month の境界: 2026-13・2026-1・全角・空白付き・日まで付き等は終了コード 2、--month 以外の引数も 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A35",
+            "name": "ID の境界: int 超え（2147483648）・long 上限付近の #next_id で add / delete できる",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A36",
+            "name": "#next_id が最大 ID+1 でなくても（欠番・全件削除済み）#next_id の値で採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A37",
+            "name": "同日の並びは ID の数値昇順（2,9,10,100）で、辞書順（10,100,2,9）にならない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A38",
+            "name": "summary のカテゴリ順: 金額は数値降順、同額は UTF-16 コードユニット順（大小文字・絵文字・結合文字を区別）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A39",
+            "name": "書き込まれるファイルが spec のファイル形式とバイト一致（LF・BOM なし・クォート規則・#next_id 保持）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A40",
+            "name": "特殊文字の往復: 絵文字・結合文字・U+2028/U+0085/VT/FF・バックスラッシュ・シェル記号・\"\" ・先頭末尾空白",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A41",
+            "name": "長大な文字列: 5 万文字のメモ・5 千文字のカテゴリ（add の往復）と 30 万文字のメモ行（直接生成）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A42",
+            "name": "文字コード非依存: C ロケール・既定文字コード非 UTF-8 でも標準出力とファイルは UTF-8（日本語・絵文字）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A43",
+            "name": "異常 CSV（列数・クォート・#next_id 不正・バイナリ）の list / summary は終了コード 1 でファイルを変更しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A44",
+            "name": "異常 CSV に対する add / delete も終了コード 1 で、ファイルは破損したまま（バイト一致）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A45",
+            "name": "異常な値の行（日付・金額・type・ID が仕様の形式外）を含むファイルは list が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A46",
+            "name": "読み取り権限の無いデータファイル（chmod 000）は list / summary / add が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A47",
+            "name": "引数エラーはデータファイル・保存先の状態より優先（破損ファイル・存在しないディレクトリ・ディレクトリ指定でも終了コード 2）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A48",
+            "name": "--data が存在しないディレクトリ配下: list/summary は空扱い、add は終了コード 1 でディレクトリを作らない。日本語・空白のパスは可",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A49",
+            "name": "category / type / memo の検証境界: CR・LF 含みや type の前後空白は終了コード 2、空白だけの category は有効",
             "pass": true,
             "detail": ""
           }
@@ -224,7 +362,7 @@
       "label": "単発 Sonnet",
       "build": {
         "ok": true,
-        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 723ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+        "log": "> Task :compileJava UP-TO-DATE\n> Task :processResources NO-SOURCE\n> Task :classes UP-TO-DATE\n> Task :jar UP-TO-DATE\n> Task :compileTestJava UP-TO-DATE\n> Task :processTestResources NO-SOURCE\n> Task :testClasses UP-TO-DATE\n> Task :test UP-TO-DATE\n> Task :startScripts UP-TO-DATE\n> Task :installDist UP-TO-DATE\n\nBUILD SUCCESSFUL in 508ms\n6 actionable tasks: 6 up-to-date\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
       },
       "ownTests": {
         "total": 16,
@@ -233,8 +371,8 @@
         "skipped": 0
       },
       "acceptance": {
-        "total": 26,
-        "passed": 26,
+        "total": 49,
+        "passed": 49,
         "cases": [
           {
             "id": "A01",
@@ -389,6 +527,144 @@
           {
             "id": "A26",
             "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A27",
+            "name": "大量データ: 20,000 件の list が全件・日付昇順・同日は ID 数値昇順で正しい",
+            "pass": true,
+            "detail": "list: 20000 rows, 0.19s"
+          },
+          {
+            "id": "A28",
+            "name": "大量データ: 20,000 件の list --month と summary（カテゴリ別は金額降順・同額はカテゴリ昇順）が正しい",
+            "pass": true,
+            "detail": "list --month 0.17s, summary 0.14s (20000 rows)"
+          },
+          {
+            "id": "A29",
+            "name": "大量データ: 20,000 件のファイルへ add すると #next_id の値で採番され、既存の件数・内容が保たれる",
+            "pass": true,
+            "detail": "add 0.16s (20000 rows)"
+          },
+          {
+            "id": "A30",
+            "name": "大量データ: 20,000 件から delete しても残りは無傷で、次の add は削除前の続き番号",
+            "pass": true,
+            "detail": "delete 0.16s (20000 rows)"
+          },
+          {
+            "id": "A31",
+            "name": "金額の最大桁・合計精度（999999999999.99 の大量合計、0.01 の千件、-0.01 / 0.00 の残高）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A32",
+            "name": "金額入力の境界: 12 桁・先頭ゼロ・0.01 は有効、13 桁・全角/非ASCII数字・空白・指数・1d 等は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A33",
+            "name": "日付の境界: 閏日（2000/1904/2024-02-29 有効、1900/2100 は無効）・30 日月の 31 日・全角/空白付きは不正",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A34",
+            "name": "--month の境界: 2026-13・2026-1・全角・空白付き・日まで付き等は終了コード 2、--month 以外の引数も 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A35",
+            "name": "ID の境界: int 超え（2147483648）・long 上限付近の #next_id で add / delete できる",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A36",
+            "name": "#next_id が最大 ID+1 でなくても（欠番・全件削除済み）#next_id の値で採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A37",
+            "name": "同日の並びは ID の数値昇順（2,9,10,100）で、辞書順（10,100,2,9）にならない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A38",
+            "name": "summary のカテゴリ順: 金額は数値降順、同額は UTF-16 コードユニット順（大小文字・絵文字・結合文字を区別）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A39",
+            "name": "書き込まれるファイルが spec のファイル形式とバイト一致（LF・BOM なし・クォート規則・#next_id 保持）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A40",
+            "name": "特殊文字の往復: 絵文字・結合文字・U+2028/U+0085/VT/FF・バックスラッシュ・シェル記号・\"\" ・先頭末尾空白",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A41",
+            "name": "長大な文字列: 5 万文字のメモ・5 千文字のカテゴリ（add の往復）と 30 万文字のメモ行（直接生成）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A42",
+            "name": "文字コード非依存: C ロケール・既定文字コード非 UTF-8 でも標準出力とファイルは UTF-8（日本語・絵文字）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A43",
+            "name": "異常 CSV（列数・クォート・#next_id 不正・バイナリ）の list / summary は終了コード 1 でファイルを変更しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A44",
+            "name": "異常 CSV に対する add / delete も終了コード 1 で、ファイルは破損したまま（バイト一致）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A45",
+            "name": "異常な値の行（日付・金額・type・ID が仕様の形式外）を含むファイルは list が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A46",
+            "name": "読み取り権限の無いデータファイル（chmod 000）は list / summary / add が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A47",
+            "name": "引数エラーはデータファイル・保存先の状態より優先（破損ファイル・存在しないディレクトリ・ディレクトリ指定でも終了コード 2）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A48",
+            "name": "--data が存在しないディレクトリ配下: list/summary は空扱い、add は終了コード 1 でディレクトリを作らない。日本語・空白のパスは可",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A49",
+            "name": "category / type / memo の検証境界: CR・LF 含みや type の前後空白は終了コード 2、空白だけの category は有効",
             "pass": true,
             "detail": ""
           }
@@ -436,7 +712,7 @@
       "label": "単発 Opus",
       "build": {
         "ok": true,
-        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 788ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+        "log": "> Task :compileJava UP-TO-DATE\n> Task :processResources NO-SOURCE\n> Task :classes UP-TO-DATE\n> Task :jar UP-TO-DATE\n> Task :compileTestJava UP-TO-DATE\n> Task :processTestResources NO-SOURCE\n> Task :testClasses UP-TO-DATE\n> Task :test UP-TO-DATE\n> Task :startScripts UP-TO-DATE\n> Task :installDist UP-TO-DATE\n\nBUILD SUCCESSFUL in 428ms\n6 actionable tasks: 6 up-to-date\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
       },
       "ownTests": {
         "total": 42,
@@ -445,8 +721,8 @@
         "skipped": 0
       },
       "acceptance": {
-        "total": 26,
-        "passed": 26,
+        "total": 49,
+        "passed": 49,
         "cases": [
           {
             "id": "A01",
@@ -601,6 +877,144 @@
           {
             "id": "A26",
             "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A27",
+            "name": "大量データ: 20,000 件の list が全件・日付昇順・同日は ID 数値昇順で正しい",
+            "pass": true,
+            "detail": "list: 20000 rows, 0.18s"
+          },
+          {
+            "id": "A28",
+            "name": "大量データ: 20,000 件の list --month と summary（カテゴリ別は金額降順・同額はカテゴリ昇順）が正しい",
+            "pass": true,
+            "detail": "list --month 0.15s, summary 0.14s (20000 rows)"
+          },
+          {
+            "id": "A29",
+            "name": "大量データ: 20,000 件のファイルへ add すると #next_id の値で採番され、既存の件数・内容が保たれる",
+            "pass": true,
+            "detail": "add 0.15s (20000 rows)"
+          },
+          {
+            "id": "A30",
+            "name": "大量データ: 20,000 件から delete しても残りは無傷で、次の add は削除前の続き番号",
+            "pass": true,
+            "detail": "delete 0.15s (20000 rows)"
+          },
+          {
+            "id": "A31",
+            "name": "金額の最大桁・合計精度（999999999999.99 の大量合計、0.01 の千件、-0.01 / 0.00 の残高）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A32",
+            "name": "金額入力の境界: 12 桁・先頭ゼロ・0.01 は有効、13 桁・全角/非ASCII数字・空白・指数・1d 等は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A33",
+            "name": "日付の境界: 閏日（2000/1904/2024-02-29 有効、1900/2100 は無効）・30 日月の 31 日・全角/空白付きは不正",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A34",
+            "name": "--month の境界: 2026-13・2026-1・全角・空白付き・日まで付き等は終了コード 2、--month 以外の引数も 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A35",
+            "name": "ID の境界: int 超え（2147483648）・long 上限付近の #next_id で add / delete できる",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A36",
+            "name": "#next_id が最大 ID+1 でなくても（欠番・全件削除済み）#next_id の値で採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A37",
+            "name": "同日の並びは ID の数値昇順（2,9,10,100）で、辞書順（10,100,2,9）にならない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A38",
+            "name": "summary のカテゴリ順: 金額は数値降順、同額は UTF-16 コードユニット順（大小文字・絵文字・結合文字を区別）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A39",
+            "name": "書き込まれるファイルが spec のファイル形式とバイト一致（LF・BOM なし・クォート規則・#next_id 保持）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A40",
+            "name": "特殊文字の往復: 絵文字・結合文字・U+2028/U+0085/VT/FF・バックスラッシュ・シェル記号・\"\" ・先頭末尾空白",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A41",
+            "name": "長大な文字列: 5 万文字のメモ・5 千文字のカテゴリ（add の往復）と 30 万文字のメモ行（直接生成）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A42",
+            "name": "文字コード非依存: C ロケール・既定文字コード非 UTF-8 でも標準出力とファイルは UTF-8（日本語・絵文字）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A43",
+            "name": "異常 CSV（列数・クォート・#next_id 不正・バイナリ）の list / summary は終了コード 1 でファイルを変更しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A44",
+            "name": "異常 CSV に対する add / delete も終了コード 1 で、ファイルは破損したまま（バイト一致）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A45",
+            "name": "異常な値の行（日付・金額・type・ID が仕様の形式外）を含むファイルは list が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A46",
+            "name": "読み取り権限の無いデータファイル（chmod 000）は list / summary / add が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A47",
+            "name": "引数エラーはデータファイル・保存先の状態より優先（破損ファイル・存在しないディレクトリ・ディレクトリ指定でも終了コード 2）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A48",
+            "name": "--data が存在しないディレクトリ配下: list/summary は空扱い、add は終了コード 1 でディレクトリを作らない。日本語・空白のパスは可",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A49",
+            "name": "category / type / memo の検証境界: CR・LF 含みや type の前後空白は終了コード 2、空白だけの category は有効",
             "pass": true,
             "detail": ""
           }
@@ -656,7 +1070,7 @@
       "label": "指揮者 Sonnet＋Haiku",
       "build": {
         "ok": true,
-        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 947ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+        "log": "> Task :compileJava UP-TO-DATE\n> Task :processResources NO-SOURCE\n> Task :classes UP-TO-DATE\n> Task :jar UP-TO-DATE\n> Task :compileTestJava UP-TO-DATE\n> Task :processTestResources NO-SOURCE\n> Task :testClasses UP-TO-DATE\n> Task :test UP-TO-DATE\n> Task :startScripts UP-TO-DATE\n> Task :installDist UP-TO-DATE\n\nBUILD SUCCESSFUL in 523ms\n6 actionable tasks: 6 up-to-date\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
       },
       "ownTests": {
         "total": 80,
@@ -665,8 +1079,8 @@
         "skipped": 0
       },
       "acceptance": {
-        "total": 26,
-        "passed": 26,
+        "total": 49,
+        "passed": 49,
         "cases": [
           {
             "id": "A01",
@@ -821,6 +1235,144 @@
           {
             "id": "A26",
             "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A27",
+            "name": "大量データ: 20,000 件の list が全件・日付昇順・同日は ID 数値昇順で正しい",
+            "pass": true,
+            "detail": "list: 20000 rows, 0.22s"
+          },
+          {
+            "id": "A28",
+            "name": "大量データ: 20,000 件の list --month と summary（カテゴリ別は金額降順・同額はカテゴリ昇順）が正しい",
+            "pass": true,
+            "detail": "list --month 0.19s, summary 0.15s (20000 rows)"
+          },
+          {
+            "id": "A29",
+            "name": "大量データ: 20,000 件のファイルへ add すると #next_id の値で採番され、既存の件数・内容が保たれる",
+            "pass": true,
+            "detail": "add 0.17s (20000 rows)"
+          },
+          {
+            "id": "A30",
+            "name": "大量データ: 20,000 件から delete しても残りは無傷で、次の add は削除前の続き番号",
+            "pass": true,
+            "detail": "delete 0.18s (20000 rows)"
+          },
+          {
+            "id": "A31",
+            "name": "金額の最大桁・合計精度（999999999999.99 の大量合計、0.01 の千件、-0.01 / 0.00 の残高）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A32",
+            "name": "金額入力の境界: 12 桁・先頭ゼロ・0.01 は有効、13 桁・全角/非ASCII数字・空白・指数・1d 等は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A33",
+            "name": "日付の境界: 閏日（2000/1904/2024-02-29 有効、1900/2100 は無効）・30 日月の 31 日・全角/空白付きは不正",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A34",
+            "name": "--month の境界: 2026-13・2026-1・全角・空白付き・日まで付き等は終了コード 2、--month 以外の引数も 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A35",
+            "name": "ID の境界: int 超え（2147483648）・long 上限付近の #next_id で add / delete できる",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A36",
+            "name": "#next_id が最大 ID+1 でなくても（欠番・全件削除済み）#next_id の値で採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A37",
+            "name": "同日の並びは ID の数値昇順（2,9,10,100）で、辞書順（10,100,2,9）にならない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A38",
+            "name": "summary のカテゴリ順: 金額は数値降順、同額は UTF-16 コードユニット順（大小文字・絵文字・結合文字を区別）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A39",
+            "name": "書き込まれるファイルが spec のファイル形式とバイト一致（LF・BOM なし・クォート規則・#next_id 保持）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A40",
+            "name": "特殊文字の往復: 絵文字・結合文字・U+2028/U+0085/VT/FF・バックスラッシュ・シェル記号・\"\" ・先頭末尾空白",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A41",
+            "name": "長大な文字列: 5 万文字のメモ・5 千文字のカテゴリ（add の往復）と 30 万文字のメモ行（直接生成）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A42",
+            "name": "文字コード非依存: C ロケール・既定文字コード非 UTF-8 でも標準出力とファイルは UTF-8（日本語・絵文字）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A43",
+            "name": "異常 CSV（列数・クォート・#next_id 不正・バイナリ）の list / summary は終了コード 1 でファイルを変更しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A44",
+            "name": "異常 CSV に対する add / delete も終了コード 1 で、ファイルは破損したまま（バイト一致）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A45",
+            "name": "異常な値の行（日付・金額・type・ID が仕様の形式外）を含むファイルは list が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A46",
+            "name": "読み取り権限の無いデータファイル（chmod 000）は list / summary / add が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A47",
+            "name": "引数エラーはデータファイル・保存先の状態より優先（破損ファイル・存在しないディレクトリ・ディレクトリ指定でも終了コード 2）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A48",
+            "name": "--data が存在しないディレクトリ配下: list/summary は空扱い、add は終了コード 1 でディレクトリを作らない。日本語・空白のパスは可",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A49",
+            "name": "category / type / memo の検証境界: CR・LF 含みや type の前後空白は終了コード 2、空白だけの category は有効",
             "pass": true,
             "detail": ""
           }
@@ -883,7 +1435,7 @@
       "label": "指揮者 Opus＋Sonnet",
       "build": {
         "ok": true,
-        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 862ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+        "log": "> Task :compileJava UP-TO-DATE\n> Task :processResources NO-SOURCE\n> Task :classes UP-TO-DATE\n> Task :jar UP-TO-DATE\n> Task :compileTestJava UP-TO-DATE\n> Task :processTestResources NO-SOURCE\n> Task :testClasses UP-TO-DATE\n> Task :test UP-TO-DATE\n> Task :startScripts UP-TO-DATE\n> Task :installDist UP-TO-DATE\n\nBUILD SUCCESSFUL in 553ms\n6 actionable tasks: 6 up-to-date\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
       },
       "ownTests": {
         "total": 14,
@@ -892,8 +1444,8 @@
         "skipped": 0
       },
       "acceptance": {
-        "total": 26,
-        "passed": 26,
+        "total": 49,
+        "passed": 49,
         "cases": [
           {
             "id": "A01",
@@ -1048,6 +1600,144 @@
           {
             "id": "A26",
             "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A27",
+            "name": "大量データ: 20,000 件の list が全件・日付昇順・同日は ID 数値昇順で正しい",
+            "pass": true,
+            "detail": "list: 20000 rows, 0.22s"
+          },
+          {
+            "id": "A28",
+            "name": "大量データ: 20,000 件の list --month と summary（カテゴリ別は金額降順・同額はカテゴリ昇順）が正しい",
+            "pass": true,
+            "detail": "list --month 0.16s, summary 0.15s (20000 rows)"
+          },
+          {
+            "id": "A29",
+            "name": "大量データ: 20,000 件のファイルへ add すると #next_id の値で採番され、既存の件数・内容が保たれる",
+            "pass": true,
+            "detail": "add 0.17s (20000 rows)"
+          },
+          {
+            "id": "A30",
+            "name": "大量データ: 20,000 件から delete しても残りは無傷で、次の add は削除前の続き番号",
+            "pass": true,
+            "detail": "delete 0.18s (20000 rows)"
+          },
+          {
+            "id": "A31",
+            "name": "金額の最大桁・合計精度（999999999999.99 の大量合計、0.01 の千件、-0.01 / 0.00 の残高）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A32",
+            "name": "金額入力の境界: 12 桁・先頭ゼロ・0.01 は有効、13 桁・全角/非ASCII数字・空白・指数・1d 等は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A33",
+            "name": "日付の境界: 閏日（2000/1904/2024-02-29 有効、1900/2100 は無効）・30 日月の 31 日・全角/空白付きは不正",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A34",
+            "name": "--month の境界: 2026-13・2026-1・全角・空白付き・日まで付き等は終了コード 2、--month 以外の引数も 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A35",
+            "name": "ID の境界: int 超え（2147483648）・long 上限付近の #next_id で add / delete できる",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A36",
+            "name": "#next_id が最大 ID+1 でなくても（欠番・全件削除済み）#next_id の値で採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A37",
+            "name": "同日の並びは ID の数値昇順（2,9,10,100）で、辞書順（10,100,2,9）にならない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A38",
+            "name": "summary のカテゴリ順: 金額は数値降順、同額は UTF-16 コードユニット順（大小文字・絵文字・結合文字を区別）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A39",
+            "name": "書き込まれるファイルが spec のファイル形式とバイト一致（LF・BOM なし・クォート規則・#next_id 保持）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A40",
+            "name": "特殊文字の往復: 絵文字・結合文字・U+2028/U+0085/VT/FF・バックスラッシュ・シェル記号・\"\" ・先頭末尾空白",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A41",
+            "name": "長大な文字列: 5 万文字のメモ・5 千文字のカテゴリ（add の往復）と 30 万文字のメモ行（直接生成）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A42",
+            "name": "文字コード非依存: C ロケール・既定文字コード非 UTF-8 でも標準出力とファイルは UTF-8（日本語・絵文字）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A43",
+            "name": "異常 CSV（列数・クォート・#next_id 不正・バイナリ）の list / summary は終了コード 1 でファイルを変更しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A44",
+            "name": "異常 CSV に対する add / delete も終了コード 1 で、ファイルは破損したまま（バイト一致）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A45",
+            "name": "異常な値の行（日付・金額・type・ID が仕様の形式外）を含むファイルは list が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A46",
+            "name": "読み取り権限の無いデータファイル（chmod 000）は list / summary / add が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A47",
+            "name": "引数エラーはデータファイル・保存先の状態より優先（破損ファイル・存在しないディレクトリ・ディレクトリ指定でも終了コード 2）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A48",
+            "name": "--data が存在しないディレクトリ配下: list/summary は空扱い、add は終了コード 1 でディレクトリを作らない。日本語・空白のパスは可",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A49",
+            "name": "category / type / memo の検証境界: CR・LF 含みや type の前後空白は終了コード 2、空白だけの category は有効",
             "pass": true,
             "detail": ""
           }
@@ -1107,7 +1797,7 @@
       "label": "指揮者 Opus＋Haiku",
       "build": {
         "ok": true,
-        "log": "> Task :compileJava\n> Task :processResources NO-SOURCE\n> Task :classes\n> Task :jar\n> Task :compileTestJava\n> Task :processTestResources NO-SOURCE\n> Task :testClasses\n> Task :test\n> Task :startScripts\n> Task :installDist\n\nBUILD SUCCESSFUL in 830ms\n6 actionable tasks: 6 executed\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
+        "log": "> Task :compileJava UP-TO-DATE\n> Task :processResources NO-SOURCE\n> Task :classes UP-TO-DATE\n> Task :jar UP-TO-DATE\n> Task :compileTestJava UP-TO-DATE\n> Task :processTestResources NO-SOURCE\n> Task :testClasses UP-TO-DATE\n> Task :test UP-TO-DATE\n> Task :startScripts UP-TO-DATE\n> Task :installDist UP-TO-DATE\n\nBUILD SUCCESSFUL in 507ms\n6 actionable tasks: 6 up-to-date\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html"
       },
       "ownTests": {
         "total": 89,
@@ -1116,8 +1806,8 @@
         "skipped": 0
       },
       "acceptance": {
-        "total": 26,
-        "passed": 26,
+        "total": 49,
+        "passed": 49,
         "cases": [
           {
             "id": "A01",
@@ -1272,6 +1962,144 @@
           {
             "id": "A26",
             "name": "ファイル IO エラー（--data がディレクトリ・保存先ディレクトリ無し・壊れたファイル）は終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A27",
+            "name": "大量データ: 20,000 件の list が全件・日付昇順・同日は ID 数値昇順で正しい",
+            "pass": true,
+            "detail": "list: 20000 rows, 0.22s"
+          },
+          {
+            "id": "A28",
+            "name": "大量データ: 20,000 件の list --month と summary（カテゴリ別は金額降順・同額はカテゴリ昇順）が正しい",
+            "pass": true,
+            "detail": "list --month 0.18s, summary 0.15s (20000 rows)"
+          },
+          {
+            "id": "A29",
+            "name": "大量データ: 20,000 件のファイルへ add すると #next_id の値で採番され、既存の件数・内容が保たれる",
+            "pass": true,
+            "detail": "add 0.17s (20000 rows)"
+          },
+          {
+            "id": "A30",
+            "name": "大量データ: 20,000 件から delete しても残りは無傷で、次の add は削除前の続き番号",
+            "pass": true,
+            "detail": "delete 0.19s (20000 rows)"
+          },
+          {
+            "id": "A31",
+            "name": "金額の最大桁・合計精度（999999999999.99 の大量合計、0.01 の千件、-0.01 / 0.00 の残高）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A32",
+            "name": "金額入力の境界: 12 桁・先頭ゼロ・0.01 は有効、13 桁・全角/非ASCII数字・空白・指数・1d 等は終了コード 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A33",
+            "name": "日付の境界: 閏日（2000/1904/2024-02-29 有効、1900/2100 は無効）・30 日月の 31 日・全角/空白付きは不正",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A34",
+            "name": "--month の境界: 2026-13・2026-1・全角・空白付き・日まで付き等は終了コード 2、--month 以外の引数も 2",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A35",
+            "name": "ID の境界: int 超え（2147483648）・long 上限付近の #next_id で add / delete できる",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A36",
+            "name": "#next_id が最大 ID+1 でなくても（欠番・全件削除済み）#next_id の値で採番される",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A37",
+            "name": "同日の並びは ID の数値昇順（2,9,10,100）で、辞書順（10,100,2,9）にならない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A38",
+            "name": "summary のカテゴリ順: 金額は数値降順、同額は UTF-16 コードユニット順（大小文字・絵文字・結合文字を区別）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A39",
+            "name": "書き込まれるファイルが spec のファイル形式とバイト一致（LF・BOM なし・クォート規則・#next_id 保持）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A40",
+            "name": "特殊文字の往復: 絵文字・結合文字・U+2028/U+0085/VT/FF・バックスラッシュ・シェル記号・\"\" ・先頭末尾空白",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A41",
+            "name": "長大な文字列: 5 万文字のメモ・5 千文字のカテゴリ（add の往復）と 30 万文字のメモ行（直接生成）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A42",
+            "name": "文字コード非依存: C ロケール・既定文字コード非 UTF-8 でも標準出力とファイルは UTF-8（日本語・絵文字）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A43",
+            "name": "異常 CSV（列数・クォート・#next_id 不正・バイナリ）の list / summary は終了コード 1 でファイルを変更しない",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A44",
+            "name": "異常 CSV に対する add / delete も終了コード 1 で、ファイルは破損したまま（バイト一致）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A45",
+            "name": "異常な値の行（日付・金額・type・ID が仕様の形式外）を含むファイルは list が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A46",
+            "name": "読み取り権限の無いデータファイル（chmod 000）は list / summary / add が終了コード 1",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A47",
+            "name": "引数エラーはデータファイル・保存先の状態より優先（破損ファイル・存在しないディレクトリ・ディレクトリ指定でも終了コード 2）",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A48",
+            "name": "--data が存在しないディレクトリ配下: list/summary は空扱い、add は終了コード 1 でディレクトリを作らない。日本語・空白のパスは可",
+            "pass": true,
+            "detail": ""
+          },
+          {
+            "id": "A49",
+            "name": "category / type / memo の検証境界: CR・LF 含みや type の前後空白は終了コード 2、空白だけの category は有効",
             "pass": true,
             "detail": ""
           }
