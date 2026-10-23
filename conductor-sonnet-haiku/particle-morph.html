@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Particle Morph Show</title>
+<style>
+  /* 画面全体を黒背景の canvas にする（UI は別途、canvas の外の HTML 要素として追加する） */
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+
+  /* UI パネル（canvas の外。画面右下に小さく半透明で置く） */
+  [hidden] { display: none !important; }
+  #ui { position: fixed; right: 12px; bottom: 12px; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font: 12px/1.2 sans-serif; color: #e8ecff; }
+  #ui .buttons { display: flex; gap: 6px; }
+  #ui button { background: rgba(20, 24, 40, 0.55); color: inherit; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 6px; padding: 5px 9px; font: inherit; cursor: pointer; opacity: 0.75; }
+  #ui button:hover { opacity: 1; }
+  #ui button:disabled { opacity: 0.35; cursor: default; }
+  #ui .rec-dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: #ff3b3b; animation: rec-blink 1s steps(2, start) infinite; }
+  #ui .hint { font-size: 10px; color: rgba(255, 255, 255, 0.45); }
+  @keyframes rec-blink { 50% { opacity: 0.2; } }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<!-- 操作 UI（canvas の外の HTML 要素。録画キャプチャには映り込まない） -->
+<div id="ui">
+  <div class="buttons">
+    <button id="btn-play" type="button" title="再生 / 一時停止（Space）">一時停止</button>
+    <button id="btn-next" type="button" title="次の形へ（→）">次の形へ</button>
+    <button id="btn-record" type="button" title="録画開始 / 停止">
+      <span id="rec-indicator" class="rec-dot" hidden></span><span id="record-label">録画開始</span>
+    </button>
+    <button id="btn-loop" type="button" title="先頭から 1 ループ分を録画して保存">1 ループ録画</button>
+  </div>
+  <div class="hint">Space: 再生/停止　→: 次の形　H: 表示切替</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ===================================================================
+// 設定 (CONFIG)：ここを変えると見た目・挙動を調整できる
+// ===================================================================
+const CONFIG = {
+  // --- パーティクル数 ---
+  particleCount: 60000,          // 通常時の点数
+  particleCountLowSpec: 30000,   // 低スペック判定時の点数
+  lowSpecCores: 4,               // 論理コア数がこの値以下なら低スペック扱い
+  lowSpecMemoryGB: 4,            // 端末メモリ(GB)がこの値以下なら低スペック扱い
+
+  // --- テキスト形 ---
+  text: 'HELLO',                 // テキスト形の文字列（変えると文字の形が変わる）
+  textWidth: 12,                 // テキストの横幅（ワールド単位）。初期視点（16:9）で画面幅の約 6 割
+
+  // --- タイミング（秒） ---
+  holdSec: 3,                    // 各形の保持時間
+  morphSec: 2.5,                 // 変形時間
+  maxDeltaSec: 0.1,              // 1 フレームの時間増分の上限（タブ復帰時のジャンプ防止）
+
+  // --- 形の寸法（ワールド単位） ---
+  shape: {
+    sphereRadius: 2.8,           // 球体の半径
+    dnaRadius: 1.2,              // DNA の螺旋半径
+    dnaHeight: 7,                // DNA の高さ
+    dnaTurns: 2.5,               // DNA の巻き数
+    galaxyRadius: 3.8,           // 銀河の半径
+    torusRadius: 2.2,            // トーラス結び目の大半径
+    torusTube: 0.7,              // トーラス結び目の管の太さ
+  },
+
+  // --- 形ごとの 2 色（順番: 球体, DNA, テキスト, 銀河, トーラス結び目） ---
+  palettes: [
+    ['#4fc3ff', '#b388ff'],
+    ['#00e5a0', '#ffd166'],
+    ['#ff6fb5', '#ffe08a'],
+    ['#8ab4ff', '#fff4d6'],
+    ['#ff8a3d', '#ff3d7f'],
+  ],
+
+  // --- 形ごとの明るさ倍率（順番は palettes と同じ）。加算合成の白飛び対策。1 が標準 ---
+  shapeBrightness: [1.0, 1.0, 0.45, 0.6, 0.55],
+
+  // --- 点の見た目・揺らぎ ---
+  pointSize: 1.6,                // 点の基準サイズ
+  intensity: 1.4,                // 発光の強さ
+  scatter: 1.0,                  // 変形途中の散らばり量
+  breathAmount: 0.04,            // 待機中の呼吸の揺れ幅
+
+  // --- 後処理（UnrealBloomPass） ---
+  bloom: { strength: 1.1, radius: 0.5, threshold: 0.2 },
+
+  // --- カメラ ---
+  camera: {
+    fov: 45,
+    distance: 14,               // 初期のカメラ距離
+    autoRotateSpeed: 0.6,       // 自動周回の速さ
+    resumeDelaySec: 3,          // 操作終了後に自動周回へ戻るまでの秒数
+    minDistance: 6,
+    maxDistance: 40,
+  },
+
+  // --- 背景の遠景の星屑 ---
+  stars: { count: 1500, minRadius: 40, maxRadius: 90, size: 1.2, opacity: 0.5 },
+
+  // --- 描画 ---
+  maxPixelRatio: 2,
+};
+
+// ===================================================================
+// 定数
+// ===================================================================
+const TWO_PI = Math.PI * 2;
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5)); // フィボナッチ球用の黄金角
+const GALAXY_ARMS = 4;                               // 銀河の腕の本数
+const DNA_STRAND_RATIO = 0.6;                        // DNA 全体のうち螺旋（2 本）に割く割合。残りは塩基対
+const TEXT_CANVAS_WIDTH = 1024;                      // テキスト描画用キャンバスの幅
+const TEXT_CANVAS_HEIGHT = 512;                      // テキスト描画用キャンバスの高さ
+const TEXT_BASE_FONT_PX = 300;                       // 基準フォントサイズ（px）
+const TEXT_FILL_RATIO = 0.9;                         // キャンバス幅に対する文字の最大幅の比率
+const ALPHA_THRESHOLD = 128;                         // 文字の画素とみなすアルファ値の下限
+const TORUS_TUBULAR_SEGMENTS = 600;                  // トーラス結び目の長さ方向の分割数
+const TORUS_RADIAL_SEGMENTS = 48;                    // トーラス結び目の断面の分割数
+const RESAMPLE_JITTER = 0.02;                        // 再サンプリングで複製した点のずれ幅
+const DELAY_SPREAD = 0.35;                           // 粒子ごとの遅延の広がり（シェーダー側の値と一致させる）
+const MIN_RENDER_SIZE = 1;                           // 描画サイズの下限（px）。0 だと WebGL の framebuffer が 0 サイズになる
+
+// ===================================================================
+// シェーダー
+// ===================================================================
+
+// 頂点シェーダー：変形・散らばり・呼吸・色の計算をすべて GPU で行う
+const PARTICLE_VERTEX_SHADER = `
+  attribute vec3 positionA;   // 現在の形の座標
+  attribute vec3 positionB;   // 次の形の座標
+  attribute float aDelay;     // 粒子ごとの遅延係数 (0〜1)
+  attribute vec3 aRandom;     // 粒子ごとの乱数 (0〜1)
+
+  uniform float uProgress;    // 変形の進行度 (0〜1)
+  uniform float uTime;        // 経過秒（呼吸・揺らぎ用）
+  uniform float uPixelRatio;
+  uniform float uPointSize;
+  uniform float uScatter;
+  uniform float uBreath;
+  uniform vec3 uFrom0;        // 変形元の 2 色
+  uniform vec3 uFrom1;
+  uniform vec3 uTo0;          // 変形先の 2 色
+  uniform vec3 uTo1;
+  uniform float uFromBright;  // 変形元の明るさ倍率
+  uniform float uToBright;    // 変形先の明るさ倍率
+
+  varying vec3 vColor;
+
+  const float DELAY_SPREAD = ${DELAY_SPREAD.toFixed(2)};
+
+  // 3 次の ease-in-out
+  float easeInOutCubic(float x) {
+    return x < 0.5 ? 4.0 * x * x * x : 1.0 - pow(-2.0 * x + 2.0, 3.0) / 2.0;
+  }
+
+  // sin/cos の組み合わせによるカールノイズ風の流れ（厳密な curl ではない）
+  vec3 curlLike(vec3 p, float t) {
+    float a = sin(p.y * 1.7 + t * 0.9) + cos(p.z * 1.3 - t * 0.7);
+    float b = sin(p.z * 1.9 + t * 1.1) + cos(p.x * 1.5 + t * 0.5);
+    float c = sin(p.x * 1.6 - t * 0.8) + cos(p.y * 1.8 + t * 0.6);
+    return vec3(a, b, c);
+  }
+
+  void main() {
+    // 粒子ごとの進行度。遅延ぶんずらし、uProgress=1 で全粒子が同時に到達するよう補正する
+    float p = clamp((uProgress - aDelay * DELAY_SPREAD) / (1.0 - DELAY_SPREAD), 0.0, 1.0);
+    vec3 mixed = mix(positionA, positionB, easeInOutCubic(p));
+
+    // 変形の途中だけ散らばる。sin(pi*p) は両端で 0 なので、始点と終点は必ず形に一致する
+    float burst = sin(p * 3.14159265);
+    vec3 flow = curlLike(mixed * 0.9 + aRandom * 4.0, uTime * 0.6);
+    vec3 scatter = (flow * 1.2 + (aRandom - 0.5) * 3.0) * uScatter * burst;
+
+    // 待機中の呼吸：粒子ごとに位相をずらした微小な揺れ（時間だけで決まるので形の切替で飛ばない）
+    float phase = uTime * 1.2 + aRandom.x * 6.2831853;
+    vec3 breath = vec3(sin(phase), sin(phase + 1.7), sin(phase + 3.4)) * uBreath;
+
+    // 色：高さで 2 色をグラデーションし、変形中は変形元 → 変形先へ補間する
+    float g = clamp(mixed.y * 0.125 + 0.5, 0.0, 1.0);
+    vec3 fromColor = mix(uFrom0, uFrom1, g);
+    vec3 toColor = mix(uTo0, uTo1, g);
+    float colorMix = easeInOutCubic(uProgress);
+    float brightness = mix(uFromBright, uToBright, colorMix); // 形ごとの明るさを変形に合わせて補間する
+    vColor = mix(fromColor, toColor, colorMix) * brightness;
+
+    vec4 mvPosition = modelViewMatrix * vec4(mixed + scatter + breath, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+    gl_PointSize = uPointSize * uPixelRatio * (12.0 / -mvPosition.z) * (0.8 + 0.4 * aRandom.z);
+  }
+`;
+
+// フラグメントシェーダー：円形のソフトな光の粒にする
+const PARTICLE_FRAGMENT_SHADER = `
+  uniform float uIntensity;
+  varying vec3 vColor;
+
+  void main() {
+    // 中心から外へなめらかに減衰する円形の光
+    float dist = length(gl_PointCoord - vec2(0.5));
+    float glow = smoothstep(0.5, 0.0, dist);
+    float alpha = glow * glow;
+    if (alpha < 0.002) discard;
+    gl_FragColor = vec4(vColor * uIntensity, alpha);
+  }
+`;
+
+// ===================================================================
+// 汎用ヘルパー
+// ===================================================================
+
+/** Box-Muller 法で標準正規乱数を返す（銀河の腕の広がり・厚み用） */
+function gaussianRandom() {
+  const u = 1 - Math.random(); // log(0) を避けるため 0 を含まない側を使う
+  const v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TWO_PI * v);
+}
+
+/** xyz の Float32Array 配列 out の index 番目の点に座標を書き込む */
+function setPoint(out, index, x, y, z) {
+  const base = index * 3;
+  out[base] = x;
+  out[base + 1] = y;
+  out[base + 2] = z;
+}
+
+/** 0〜n-1 を Fisher-Yates でシャッフルした新しい配列を返す（入力は使わない） */
+function shuffledIndices(n) {
+  const indices = new Uint32Array(n);
+  for (let i = 0; i < n; i++) indices[i] = i;
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const swap = indices[i];
+    indices[i] = indices[j];
+    indices[j] = swap;
+  }
+  return indices;
+}
+
+/**
+ * 点群 src（xyz の Float32Array）を target 点に揃える（再サンプリング）。
+ * 点が足りない分はランダムに選んだ点を微小にずらして複製し、同点数に埋める。
+ * 点が多い場合はシャッフル順の先頭 target 点を使う。
+ */
+function resampleToCount(src, target) {
+  const srcCount = src.length / 3;
+  if (srcCount === 0) throw new Error('resampleToCount: 元の点群が空です');
+  const order = shuffledIndices(srcCount);
+  const out = new Float32Array(target * 3);
+  for (let i = 0; i < target; i++) {
+    const isOriginal = i < srcCount;
+    const s = (isOriginal ? order[i] : Math.floor(Math.random() * srcCount)) * 3;
+    const jitter = isOriginal ? 0 : RESAMPLE_JITTER;
+    setPoint(
+      out, i,
+      src[s] + (Math.random() - 0.5) * 2 * jitter,
+      src[s + 1] + (Math.random() - 0.5) * 2 * jitter,
+      src[s + 2] + (Math.random() - 0.5) * 2 * jitter,
+    );
+  }
+  return out;
+}
+
+// ===================================================================
+// 形の点群生成（起動時に一度だけ呼ぶ）
+// ===================================================================
+
+/** フィボナッチ球：表面に均等に点を配置する */
+function buildSpherePoints(count, radius) {
+  const out = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const y = 1 - ((2 * i + 1) / count); // -1〜1 を等間隔に（極を避ける中点則）
+    const ring = Math.sqrt(1 - y * y);   // その高さの円の半径
+    const theta = i * GOLDEN_ANGLE;
+    setPoint(out, i, Math.cos(theta) * ring * radius, y * radius, Math.sin(theta) * ring * radius);
+  }
+  return out;
+}
+
+/** DNA 二重螺旋：2 本の螺旋（位相を π ずらす）＋中心を横切る塩基対の梯子 */
+function buildDnaPoints(count) {
+  const { dnaRadius: radius, dnaHeight: height, dnaTurns: turns } = CONFIG.shape;
+  const perStrand = Math.floor((count * DNA_STRAND_RATIO) / 2);
+  const rungCount = count - perStrand * 2;
+  const out = new Float32Array(count * 3);
+
+  // 螺旋：2 本とも t（0〜1）で高さを決め、片方を π ずらして配置する
+  for (let s = 0; s < 2; s++) {
+    for (let i = 0; i < perStrand; i++) {
+      const t = i / perStrand;
+      const angle = t * turns * TWO_PI + s * Math.PI;
+      setPoint(out, s * perStrand + i,
+        Math.cos(angle) * radius, (t - 0.5) * height, Math.sin(angle) * radius);
+    }
+  }
+
+  // 梯子：螺旋の中心を横切る線分上に、ランダムな位置の点を置く（-1〜1 が両螺旋の位置に対応）
+  for (let j = 0; j < rungCount; j++) {
+    const t = Math.random();
+    const angle = t * turns * TWO_PI;
+    const along = Math.random() * 2 - 1;
+    setPoint(out, perStrand * 2 + j,
+      Math.cos(angle) * radius * along, (t - 0.5) * height, Math.sin(angle) * radius * along);
+  }
+  return out;
+}
+
+/**
+ * テキスト形用：Canvas 2D に文字を白で描き、白画素の座標を平坦配列 [x, y, x, y, ...] で返す。
+ * 文字の描画は同期的に行う（Web フォントは使わず、システムフォントを使う）。
+ */
+function sampleTextPixels(text) {
+  const canvas = document.createElement('canvas');
+  canvas.width = TEXT_CANVAS_WIDTH;
+  canvas.height = TEXT_CANVAS_HEIGHT;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  // キャンバス幅に収まるようフォントサイズを決める
+  ctx.font = `bold ${TEXT_BASE_FONT_PX}px sans-serif`;
+  const measured = ctx.measureText(text).width || 1;
+  const fontPx = Math.floor(TEXT_BASE_FONT_PX * Math.min(1, (TEXT_CANVAS_WIDTH * TEXT_FILL_RATIO) / measured));
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, TEXT_CANVAS_WIDTH, TEXT_CANVAS_HEIGHT);
+  ctx.font = `bold ${fontPx}px sans-serif`;
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, TEXT_CANVAS_WIDTH / 2, TEXT_CANVAS_HEIGHT / 2);
+
+  const { data } = ctx.getImageData(0, 0, TEXT_CANVAS_WIDTH, TEXT_CANVAS_HEIGHT);
+  const pixels = [];
+  for (let y = 0; y < TEXT_CANVAS_HEIGHT; y++) {
+    for (let x = 0; x < TEXT_CANVAS_WIDTH; x++) {
+      if (data[(y * TEXT_CANVAS_WIDTH + x) * 4] > ALPHA_THRESHOLD) pixels.push(x, y);
+    }
+  }
+  return pixels;
+}
+
+/**
+ * テキスト形：CONFIG.text の白画素を、横幅 CONFIG.textWidth・中心原点のワールド座標に変換して点群化する。
+ * 文字が描けなかった場合は球体で代用する（コンソールにエラーを出さないため）。
+ */
+function buildTextPoints(count) {
+  const text = CONFIG.text.trim() || 'HELLO';
+  const pixels = sampleTextPixels(text);
+  if (pixels.length === 0) return buildSpherePoints(count, CONFIG.shape.sphereRadius);
+
+  // 画素の範囲から中心と倍率を求める（文字列が変わっても横幅が揃う）
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let i = 0; i < pixels.length; i += 2) {
+    minX = Math.min(minX, pixels[i]);
+    maxX = Math.max(maxX, pixels[i]);
+    minY = Math.min(minY, pixels[i + 1]);
+    maxY = Math.max(maxY, pixels[i + 1]);
+  }
+  const scale = CONFIG.textWidth / Math.max(maxX - minX, 1);
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+
+  const pixelCount = pixels.length / 2;
+  const src = new Float32Array(pixelCount * 3);
+  for (let i = 0; i < pixelCount; i++) {
+    const x = (pixels[i * 2] - centerX) * scale;
+    const y = -(pixels[i * 2 + 1] - centerY) * scale; // 画像は下向きが正なので反転
+    setPoint(src, i, x, y, (Math.random() - 0.5) * 0.3); // 少し厚みを持たせる
+  }
+  return resampleToCount(src, count);
+}
+
+/** 渦巻き銀河：4 本の腕。中心ほど密、外ほど腕が広がり、中心はわずかに厚い */
+function buildGalaxyPoints(count) {
+  const radius = CONFIG.shape.galaxyRadius;
+  const out = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const ratio = Math.pow(Math.random(), 1.8); // 0〜1。べき乗で中心ほど点が密になる
+    const r = radius * ratio;
+    const armAngle = (i % GALAXY_ARMS) * (TWO_PI / GALAXY_ARMS);
+    const spiral = ratio * Math.PI * 1.6;             // 中心から外へ巻く角度
+    const spread = gaussianRandom() * 0.18 * (0.4 + ratio); // 腕の幅
+    const angle = armAngle + spiral + spread;
+    const thickness = gaussianRandom() * (0.06 + 0.2 * (1 - ratio)); // わずかな厚み
+    setPoint(out, i, Math.cos(angle) * r, thickness, Math.sin(angle) * r);
+  }
+  return out;
+}
+
+/** トーラス結び目：TorusKnotGeometry の表面頂点を再サンプリングして点群化 */
+function buildTorusKnotPoints(count) {
+  const { torusRadius, torusTube } = CONFIG.shape;
+  const geometry = new THREE.TorusKnotGeometry(
+    torusRadius, torusTube, TORUS_TUBULAR_SEGMENTS, TORUS_RADIAL_SEGMENTS,
+  );
+  const points = resampleToCount(geometry.attributes.position.array, count);
+  geometry.dispose(); // 一時ジオメトリは使い終わったら解放
+  return points;
+}
+
+/** 形の生成関数の順番は CONFIG.palettes と対応させる */
+const SHAPE_BUILDERS = [
+  (count) => buildSpherePoints(count, CONFIG.shape.sphereRadius),
+  buildDnaPoints,
+  buildTextPoints,
+  buildGalaxyPoints,
+  buildTorusKnotPoints,
+];
+
+/** 全形を同じ点数で生成し、BufferAttribute の配列として返す */
+function createShapeAttributes(count) {
+  return SHAPE_BUILDERS.map((build) => new THREE.BufferAttribute(build(count), 3));
+}
+
+// ===================================================================
+// パーティクル本体（ジオメトリ・マテリアル・Points）
+// ===================================================================
+
+/** 粒子ごとの遅延係数と乱数を生成する（起動時のみ） */
+function createParticleRandoms(count) {
+  const delay = new Float32Array(count);
+  const random = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    delay[i] = Math.random();
+    setPoint(random, i, Math.random(), Math.random(), Math.random());
+  }
+  return {
+    aDelay: new THREE.BufferAttribute(delay, 1),
+    aRandom: new THREE.BufferAttribute(random, 3),
+  };
+}
+
+/** BufferGeometry を作る。positionA/B は後で形の切替時に参照を差し替える */
+function createParticleGeometry(count, shapeAttributes) {
+  const geometry = new THREE.BufferGeometry();
+  const randoms = createParticleRandoms(count);
+  // Points の描画に必要な position は形 0 の参照を入れておく（シェーダーでは positionA/B を使う）
+  geometry.setAttribute('position', shapeAttributes[0]);
+  geometry.setAttribute('positionA', shapeAttributes[0]);
+  geometry.setAttribute('positionB', shapeAttributes[1]);
+  geometry.setAttribute('aDelay', randoms.aDelay);
+  geometry.setAttribute('aRandom', randoms.aRandom);
+  return geometry;
+}
+
+/** 形ごとの 2 色（THREE.Color。線形空間に変換される） */
+function createPaletteColors() {
+  return CONFIG.palettes.map(([colorA, colorB]) => [new THREE.Color(colorA), new THREE.Color(colorB)]);
+}
+
+/** シェーダー用 uniform をまとめて作る */
+function createUniforms(paletteColors, pixelRatio) {
+  return {
+    uProgress: { value: 0 },
+    uTime: { value: 0 },
+    uPixelRatio: { value: pixelRatio },
+    uPointSize: { value: CONFIG.pointSize },
+    uIntensity: { value: CONFIG.intensity },
+    uScatter: { value: CONFIG.scatter },
+    uBreath: { value: CONFIG.breathAmount },
+    uFrom0: { value: paletteColors[0][0] },
+    uFrom1: { value: paletteColors[0][1] },
+    uTo0: { value: paletteColors[1][0] },
+    uTo1: { value: paletteColors[1][1] },
+    uFromBright: { value: CONFIG.shapeBrightness[0] ?? 1 },
+    uToBright: { value: CONFIG.shapeBrightness[1] ?? 1 },
+  };
+}
+
+/** 加算合成・深度書き込みなしの ShaderMaterial を作る */
+function createParticleMaterial(uniforms) {
+  return new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: PARTICLE_VERTEX_SHADER,
+    fragmentShader: PARTICLE_FRAGMENT_SHADER,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+}
+
+// ===================================================================
+// シーケンス管理（保持 → 変形 → 次の形、ループ）
+// ===================================================================
+
+/**
+ * 形のシーケンスを管理する。
+ * 形の切替では attribute の参照だけを差し替え、頂点データはコピーしない。
+ * 毎フレームの CPU 処理は uniform の更新だけ。
+ */
+function createSequence({ geometry, uniforms, shapeAttributes, paletteColors }) {
+  const state = { playing: true, index: 0, phase: 'hold', elapsed: 0 };
+  const loopListeners = new Set();
+  const shapeCount = shapeAttributes.length;
+
+  /** 形 index の保持に入る。A=現在の形、B=次の形 を設定し uProgress を 0 に戻す */
+  function enterHold(index, leftover) {
+    const next = (index + 1) % shapeCount;
+    geometry.setAttribute('positionA', shapeAttributes[index]);
+    geometry.setAttribute('positionB', shapeAttributes[next]);
+    uniforms.uFrom0.value = paletteColors[index][0];
+    uniforms.uFrom1.value = paletteColors[index][1];
+    uniforms.uTo0.value = paletteColors[next][0];
+    uniforms.uTo1.value = paletteColors[next][1];
+    uniforms.uFromBright.value = CONFIG.shapeBrightness[index] ?? 1;
+    uniforms.uToBright.value = CONFIG.shapeBrightness[next] ?? 1;
+    uniforms.uProgress.value = 0;
+    state.index = index;
+    state.phase = 'hold';
+    state.elapsed = leftover;
+  }
+
+  /** 変形を終えて次の形の保持に入る。0 に戻った時はループ完了を通知する */
+  function finishMorph(leftover) {
+    const next = (state.index + 1) % shapeCount;
+    enterHold(next, leftover);
+    if (next === 0) notifyLoopComplete();
+  }
+
+  /** ループ完了（形 4 → 形 0 の変形完了）を登録済みの listener に通知する */
+  function notifyLoopComplete() {
+    loopListeners.forEach((callback) => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('onLoopComplete の callback でエラーが発生しました:', error);
+      }
+    });
+  }
+
+  /** 毎フレーム呼ぶ。保持と変形の時間を進め、進行度 uProgress を更新する */
+  function update(dt) {
+    if (!state.playing) return;
+    state.elapsed += dt;
+    if (state.phase === 'hold') {
+      if (state.elapsed >= CONFIG.holdSec) {
+        state.phase = 'morph';
+        state.elapsed -= CONFIG.holdSec;
+      }
+      return;
+    }
+    const progress = state.elapsed / CONFIG.morphSec;
+    if (progress >= 1) {
+      finishMorph(state.elapsed - CONFIG.morphSec);
+      return;
+    }
+    uniforms.uProgress.value = progress;
+  }
+
+  /**
+   * 次の形へ進める（再生も開始する）。
+   * 保持中なら変形を開始し、変形中なら変形を完了させて次の保持に入る。
+   */
+  function skip() {
+    state.playing = true;
+    if (state.phase === 'hold') {
+      state.phase = 'morph';
+      state.elapsed = 0;
+      uniforms.uProgress.value = 0;
+      return;
+    }
+    finishMorph(0);
+  }
+
+  /** 形 0 の保持からシーケンスをやり直す（録画の 1 ループ開始などに使う） */
+  function restartSequence() {
+    enterHold(0, 0);
+  }
+
+  /** ループ完了時の callback を登録する。戻り値の関数を呼ぶと登録を解除できる */
+  function onLoopComplete(callback) {
+    loopListeners.add(callback);
+    return () => loopListeners.delete(callback);
+  }
+
+  enterHold(0, 0);
+
+  return {
+    update,
+    skip,
+    restartSequence,
+    onLoopComplete,
+    play: () => { state.playing = true; },
+    pause: () => { state.playing = false; },
+    togglePlay: () => { state.playing = !state.playing; },
+    get isPlaying() { return state.playing; },
+  };
+}
+
+// ===================================================================
+// 背景・星屑
+// ===================================================================
+
+/** 黒〜濃紺の縦グラデーションを Canvas に描いてテクスチャにする（scene.background 用） */
+function createBackgroundTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 4;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, '#0d1a3f'); // 上：濃紺
+  gradient.addColorStop(1, '#010103'); // 下：ほぼ黒
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+/** 遠景の薄い星屑（球殻上に散らした暗めの点）。Bloom が強く掛からない明るさにしている */
+function createStarfield() {
+  const { count, minRadius, maxRadius, size, opacity } = CONFIG.stars;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const cosTheta = Math.random() * 2 - 1; // 球面上の一様分布
+    const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
+    const phi = Math.random() * TWO_PI;
+    const radius = minRadius + Math.random() * (maxRadius - minRadius);
+    setPoint(positions, i,
+      radius * sinTheta * Math.cos(phi), radius * cosTheta, radius * sinTheta * Math.sin(phi));
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    color: 0x6677aa,
+    size,
+    sizeAttenuation: false,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+  });
+  return new THREE.Points(geometry, material);
+}
+
+// ===================================================================
+// 描画環境（renderer / camera / composer / controls）
+// ===================================================================
+
+/** devicePixelRatio を上限付きで返す */
+function getPixelRatio() {
+  return Math.min(window.devicePixelRatio || 1, CONFIG.maxPixelRatio);
+}
+
+/** ビューポートの描画サイズ。0 の辺を含むと framebuffer が 0 サイズになるので MIN_RENDER_SIZE で下限を掛ける */
+function getViewportSize() {
+  return {
+    width: Math.max(MIN_RENDER_SIZE, window.innerWidth),
+    height: Math.max(MIN_RENDER_SIZE, window.innerHeight),
+  };
+}
+
+/** 低スペック判定：論理コア数かメモリ量が少なければ true */
+function isLowSpecDevice() {
+  const cores = navigator.hardwareConcurrency || 8;
+  const memoryGB = navigator.deviceMemory || 8; // 未対応ブラウザでは既定値を使う
+  return cores <= CONFIG.lowSpecCores || memoryGB <= CONFIG.lowSpecMemoryGB;
+}
+
+/** 使う点数を決める（低スペックなら少なく） */
+function resolveParticleCount() {
+  return isLowSpecDevice() ? CONFIG.particleCountLowSpec : CONFIG.particleCount;
+}
+
+/** WebGL レンダラーを作り、body に追加する */
+function createRenderer(pixelRatio) {
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(pixelRatio);
+  const { width, height } = getViewportSize();
+  renderer.setSize(width, height);
+  document.body.appendChild(renderer.domElement);
+  return renderer;
+}
+
+/** カメラを作る（アスペクト比は 0 除算を避けるため getViewportSize の値から求める） */
+function createCamera() {
+  const { width, height } = getViewportSize();
+  const camera = new THREE.PerspectiveCamera(
+    CONFIG.camera.fov, width / height, 0.1, 300,
+  );
+  camera.position.set(0, 2, CONFIG.camera.distance);
+  return camera;
+}
+
+/** 後処理：RenderPass → UnrealBloomPass → OutputPass（OutputPass で色空間を sRGB に戻す） */
+function createComposer(renderer, scene, camera, pixelRatio) {
+  const { width, height } = getViewportSize();
+  const composer = new EffectComposer(renderer);
+  composer.setPixelRatio(pixelRatio);
+  composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(new UnrealBloomPass(
+    new THREE.Vector2(width, height),
+    CONFIG.bloom.strength,
+    CONFIG.bloom.radius,
+    CONFIG.bloom.threshold,
+  ));
+  composer.addPass(new OutputPass());
+  composer.setSize(width, height);
+  return composer;
+}
+
+/**
+ * OrbitControls を作る。
+ * 自動周回は controls.autoRotate で行い、ドラッグ等の操作中は止め、操作終了の数秒後に再開する。
+ */
+function createControls(camera, domElement) {
+  const controls = new OrbitControls(camera, domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+  controls.enablePan = false;
+  controls.minDistance = CONFIG.camera.minDistance;
+  controls.maxDistance = CONFIG.camera.maxDistance;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = CONFIG.camera.autoRotateSpeed;
+
+  let resumeTimer = null;
+  controls.addEventListener('start', () => {
+    controls.autoRotate = false;
+    clearTimeout(resumeTimer);
+    resumeTimer = null;
+  });
+  controls.addEventListener('end', () => {
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(() => {
+      controls.autoRotate = true;
+      resumeTimer = null;
+    }, CONFIG.camera.resumeDelaySec * 1000);
+  });
+  return controls;
+}
+
+/** 背景・星屑・パーティクルを scene にまとめる */
+function createScene(particles) {
+  const scene = new THREE.Scene();
+  scene.background = createBackgroundTexture(); // canvas に描くので録画・Bloom 後も背景が残る
+  scene.add(createStarfield());
+  scene.add(particles);
+  return scene;
+}
+
+/** ウィンドウサイズ変更に合わせて各要素を更新する */
+function handleResize({ renderer, composer, camera, uniforms }) {
+  const { width, height } = getViewportSize();
+  const pixelRatio = getPixelRatio();
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(pixelRatio);
+  renderer.setSize(width, height);
+  composer.setPixelRatio(pixelRatio);
+  composer.setSize(width, height);
+  uniforms.uPixelRatio.value = pixelRatio;
+}
+
+/** 毎フレームの処理：時間更新 → シーケンス → カメラ → 描画 */
+function startAnimationLoop({ renderer, composer, controls, sequence, uniforms }) {
+  let lastTime = performance.now();
+  renderer.setAnimationLoop(() => {
+    const now = performance.now();
+    const dt = Math.min((now - lastTime) / 1000, CONFIG.maxDeltaSec);
+    lastTime = now;
+    uniforms.uTime.value += dt;   // 待機の呼吸・揺らぎ用（一時停止中も進む）
+    sequence.update(dt);
+    controls.update(dt);
+    composer.render(dt);
+  });
+}
+
+// ===================================================================
+// UI と録画（canvas の外の HTML 要素。録画には映り込まない）
+// ===================================================================
+
+/** UI の表示/非表示を切り替えるキー（大文字小文字は区別しない） */
+const UI_TOGGLE_KEY = 'h';
+/** 録画の設定 */
+const RECORD_FPS = 60;                                                        // captureStream のフレームレート
+const RECORD_BITRATE = 12_000_000;                                            // 映像ビットレート（bps）
+const RECORD_MIME_TYPES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8']; // 優先順（先に対応しているものを使う）
+const DOWNLOAD_REVOKE_DELAY_MS = 1000;                                        // 保存開始後に Blob URL を解放するまでの待ち時間
+
+/** 録画の状態：録画中の MediaRecorder と、1 ループ録画で登録したループ完了 callback の解除関数 */
+const recordingState = { recorder: null, unsubscribeLoop: null };
+
+/** UI の要素をまとめて取得する */
+function getUiElements() {
+  return {
+    root: document.getElementById('ui'),
+    play: document.getElementById('btn-play'),
+    next: document.getElementById('btn-next'),
+    record: document.getElementById('btn-record'),
+    recordLabel: document.getElementById('record-label'),
+    recordIndicator: document.getElementById('rec-indicator'),
+    loop: document.getElementById('btn-loop'),
+  };
+}
+
+/** 録画中かどうか */
+function isRecording() {
+  return recordingState.recorder !== null;
+}
+
+/** 対応している録画用 MIME タイプを返す（どれも非対応なら null＝ブラウザ既定） */
+function pickRecordingMimeType() {
+  return RECORD_MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
+}
+
+/** 日時を YYYYMMDD-HHMMSS 形式の文字列にする（保存ファイル名用） */
+function formatTimestamp(date) {
+  const pad = (value) => String(value).padStart(2, '0');
+  const ymd = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+  const hms = `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  return `${ymd}-${hms}`;
+}
+
+/** Blob を a[download] で自動ダウンロードする */
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), DOWNLOAD_REVOKE_DELAY_MS);
+}
+
+/** MediaRecorder を作って録画を開始する。失敗・非対応時は通知して false を返す */
+function startRecording() {
+  if (isRecording()) return false;
+  if (typeof MediaRecorder === 'undefined' || !window.__app.canvas.captureStream) {
+    alert('このブラウザは録画（MediaRecorder / captureStream）に対応していません。');
+    return false;
+  }
+
+  const stream = window.__app.canvas.captureStream(RECORD_FPS);
+  const mimeType = pickRecordingMimeType();
+  const options = { videoBitsPerSecond: RECORD_BITRATE, ...(mimeType ? { mimeType } : {}) };
+  const chunks = [];
+  let recorder;
+  try {
+    recorder = new MediaRecorder(stream, options);
+    recorder.start();
+  } catch (error) {
+    console.error('録画を開始できませんでした:', error);
+    stream.getTracks().forEach((track) => track.stop());
+    alert('録画を開始できませんでした。');
+    return false;
+  }
+
+  recorder.addEventListener('dataavailable', (event) => {
+    if (event.data.size > 0) chunks.push(event.data);
+  });
+  recorder.addEventListener('stop', () => {
+    const blob = new Blob(chunks, { type: mimeType ?? 'video/webm' });
+    downloadBlob(blob, `particle-morph-${formatTimestamp(new Date())}.webm`);
+    stream.getTracks().forEach((track) => track.stop());
+  });
+
+  recordingState.recorder = recorder;
+  syncUi();
+  return true;
+}
+
+/** 録画を停止する（停止後、stop イベントで自動ダウンロードされる） */
+function stopRecording() {
+  if (!isRecording()) return;
+  const { recorder, unsubscribeLoop } = recordingState;
+  recordingState.recorder = null;
+  recordingState.unsubscribeLoop = null;
+  if (unsubscribeLoop) unsubscribeLoop();
+  if (recorder.state !== 'inactive') recorder.stop();
+  syncUi();
+}
+
+/** 録画開始／停止を切り替える（録画ボタン用） */
+function toggleRecording() {
+  if (isRecording()) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+/** 先頭から 1 ループ分を再生しながら録画し、ループ完了で自動停止・保存する（録画中は無視） */
+function recordOneLoop() {
+  if (isRecording()) return;
+  if (!startRecording()) return;
+  window.__app.restartSequence();
+  window.__app.play();
+  recordingState.unsubscribeLoop = window.__app.onLoopComplete(() => stopRecording());
+  syncUi();
+}
+
+/** 再生 / 一時停止を切り替える（ボタン・Space 共通） */
+function togglePlayback() {
+  window.__app.togglePlay();
+  syncUi();
+}
+
+/** 次の形へ進める（ボタン・→ 共通） */
+function skipShape() {
+  window.__app.skip();
+  syncUi();
+}
+
+/** 再生ボタン・録画ボタン・録画インジケーターを現在の状態（isPlaying・録画中か）に合わせる */
+function syncUi() {
+  const els = getUiElements();
+  const recordingNow = isRecording();
+  els.play.textContent = window.__app.isPlaying ? '一時停止' : '再生';
+  els.recordLabel.textContent = recordingNow ? '録画停止' : '録画開始';
+  els.recordIndicator.hidden = !recordingNow;
+  els.loop.disabled = recordingNow;
+}
+
+/** ボタンのクリックに処理を結びつける。クリック後はフォーカスを外し、Space の二重動作を防ぐ */
+function bindButton(button, action) {
+  button.addEventListener('click', () => {
+    button.blur();
+    action();
+  });
+}
+
+/** 入力系の要素にフォーカス中かどうか（その間はショートカットを無効にする） */
+function isTypingTarget(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
+
+/** キーボード操作：Space で再生/一時停止、→ で次の形、H で UI の表示/非表示 */
+function handleKeydown(event) {
+  if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (isTypingTarget(event.target)) return;
+
+  if (event.key === ' ') {
+    event.preventDefault(); // Space によるページスクロールを防ぐ
+    togglePlayback();
+  } else if (event.key === 'ArrowRight') {
+    skipShape();
+  } else if (event.key.toLowerCase() === UI_TOGGLE_KEY) {
+    const { root } = getUiElements();
+    root.hidden = !root.hidden;
+  }
+}
+
+/** UI のイベントを登録し、キーボード操作を有効にする（window.__app 公開後に呼ぶ） */
+function setupUi() {
+  const els = getUiElements();
+  bindButton(els.play, togglePlayback);
+  bindButton(els.next, skipShape);
+  bindButton(els.record, toggleRecording);
+  bindButton(els.loop, recordOneLoop);
+  window.addEventListener('keydown', handleKeydown);
+  syncUi();
+}
+
+// ===================================================================
+// 初期化と外部公開
+// ===================================================================
+
+/** 全体を組み立てて描画を開始し、window.__app を公開する */
+function init() {
+  const pixelRatio = getPixelRatio();
+  const count = resolveParticleCount();
+  const paletteColors = createPaletteColors();
+
+  const shapeAttributes = createShapeAttributes(count); // 形の点群は起動時に 1 回だけ生成
+  const geometry = createParticleGeometry(count, shapeAttributes);
+  const uniforms = createUniforms(paletteColors, pixelRatio);
+  const particles = new THREE.Points(geometry, createParticleMaterial(uniforms));
+  particles.frustumCulled = false; // 変形中の位置とバウンディング球がずれても消えないように
+
+  const renderer = createRenderer(pixelRatio);
+  const scene = createScene(particles);
+  const camera = createCamera();
+  const composer = createComposer(renderer, scene, camera, pixelRatio);
+  const controls = createControls(camera, renderer.domElement);
+  const sequence = createSequence({ geometry, uniforms, shapeAttributes, paletteColors });
+
+  window.addEventListener('resize', () => handleResize({ renderer, composer, camera, uniforms }));
+  startAnimationLoop({ renderer, composer, controls, sequence, uniforms });
+
+  // 外部（UI・録画スクリプト）から使う API
+  window.__app = {
+    play: () => sequence.play(),
+    pause: () => sequence.pause(),
+    togglePlay: () => sequence.togglePlay(),
+    skip: () => sequence.skip(),
+    restartSequence: () => sequence.restartSequence(),
+    get isPlaying() { return sequence.isPlaying; },
+    onLoopComplete: (callback) => sequence.onLoopComplete(callback),
+    renderer,
+    canvas: renderer.domElement,
+  };
+}
+
+try {
+  init();
+  setupUi();
+} catch (error) {
+  console.error('初期化に失敗しました:', error);
+  const message = document.createElement('p');
+  message.textContent = 'WebGL の初期化に失敗しました。対応ブラウザでお試しください。';
+  message.style.cssText = 'color:#fff;font-family:sans-serif;padding:16px;';
+  document.body.appendChild(message);
+}
+</script>
+</body>
+</html>

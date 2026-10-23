@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>モデル比較</title>
+<style>
+  /* 全体: 黒背景・薄いグレー文字。スクロールさせず、ビューポート全体を使う */
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    color: #ccc;
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  }
+
+  /* 画面全体を縦方向に並べる: ツールバー / タブ行 / グリッド */
+  #app {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  /* 上部の細いツールバー（高さ 36px） */
+  #toolbar {
+    height: 36px;
+    box-sizing: border-box;
+    /* コスト表のオーバーレイより前面に出し、ツールバーのボタンで再度閉じられるようにする */
+    position: relative;
+    z-index: 11;
+    flex: 0 0 36px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 10px;
+    border-bottom: 1px solid #222;
+    font-size: 13px;
+  }
+  #toolbar button,
+  #toolbar select {
+    background: #111;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font: inherit;
+    cursor: pointer;
+  }
+  #toolbar button:hover,
+  #toolbar select:hover {
+    color: #fff;
+    border-color: #666;
+  }
+
+  /* タブ表示時のみ出すラベルタブ行 */
+  #tabs {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    padding: 4px 10px;
+    border-bottom: 1px solid #222;
+    overflow-x: auto;
+  }
+  #tabs[hidden] {
+    display: none;
+  }
+  .tab-btn {
+    background: #111;
+    color: #999;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tab-btn[aria-pressed="true"] {
+    color: #fff;
+    border-color: #888;
+  }
+
+  /* グリッド: 残りの高さを埋める。列・行数は JS で設定する */
+  #grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    gap: 2px;
+    background: #222;
+  }
+
+  /* 各セル: iframe と左上のラベルを重ねる */
+  .cell {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #000;
+  }
+  .cell[hidden] {
+    display: none;
+  }
+  .cell iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #000;
+  }
+
+  /* 半透明のラベル（クリックで全画面拡大を切り替える） */
+  .cell-label {
+    background: rgba(0, 0, 0, 0.55);
+    color: #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .cell-label:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  /* ラベルとコスト表示を左上に横並びで重ねる（コスト表示はクリックを透過させる） */
+  .cell-head {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+  }
+  .cell-head .cell-label {
+    pointer-events: auto;
+  }
+  .cell-cost {
+    background: rgba(0, 0, 0, 0.7);
+    color: #e6e6e6;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  /* コスト表: 画面全体を覆う半透明の黒背景と、中央の表パネル */
+  #cost-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  #cost-overlay[hidden] {
+    display: none;
+  }
+  .cost-dialog {
+    box-sizing: border-box;
+    width: min(900px, 92vw);
+    max-height: 80vh;
+    overflow: auto;
+    padding: 16px 18px;
+    background: #0d0d0d;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #ccc;
+    font-size: 12px;
+  }
+  .cost-dialog h2 {
+    margin: 0 0 10px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .cost-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .cost-table th,
+  .cost-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #222;
+    text-align: left;
+    vertical-align: top;
+  }
+  .cost-table th {
+    color: #888;
+    font-weight: normal;
+  }
+  .cost-table td:last-child { white-space: normal; overflow-wrap: anywhere; }
+  .cost-table tr.is-cheapest td {
+    background: rgba(60, 160, 80, 0.18);
+  }
+  .cost-total {
+    min-width: 90px;
+  }
+  .cost-bar-track {
+    height: 6px;
+    margin-top: 4px;
+    background: #1a1a1a;
+    border-radius: 3px;
+  }
+  .cost-bar {
+    height: 100%;
+    background: #5b8def;
+    border-radius: 3px;
+  }
+  .cost-breakdown div {
+    white-space: nowrap;
+  }
+  .cost-note {
+    margin: 12px 0 0;
+    color: #777;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 上部ツールバー: 全リロードとレイアウト切替 -->
+  <header id="toolbar">
+    <button id="reload" type="button">全てリロード</button>
+    <select id="layout" aria-label="レイアウト">
+      <option value="3x2">3×2</option>
+      <option value="2x3">2×3</option>
+      <option value="tabs">1列ずつ（タブ）</option>
+    </select>
+    <button id="cost-table" type="button" aria-haspopup="dialog">コスト表</button>
+  </header>
+
+  <!-- タブ表示時だけ見えるラベルボタン行 -->
+  <nav id="tabs" hidden></nav>
+
+  <main id="grid"></main>
+</div>
+
+<!-- コスト表のオーバーレイ（hidden で非表示。背景クリック・Esc・ツールバーの再クリックで閉じる） -->
+<div id="cost-overlay" hidden>
+  <div id="cost-dialog" class="cost-dialog" role="dialog" aria-modal="true" aria-labelledby="cost-title">
+    <h2 id="cost-title">コスト表</h2>
+    <div id="cost-table-slot"></div>
+    <p class="cost-note">API 定価換算（USD/100万トークン）: Opus 5.5 入力$4・出力$20、Sonnet 5.5 入力$2・出力$10、Haiku 5.5 入力$0.10・出力$0.50（10万トークン超は$0.50/$2.50）。キャッシュ読込 Opus/Sonnet $0.20、Haiku は入力の0.1倍。キャッシュ書込は入力の1.25倍(5分)/2倍(1時間)で推定。所要時間は最初〜最後の応答時刻の差。</p>
+  </div>
+</div>
+
+<script>
+// ===== 設定 =====
+
+// 比較対象の一覧（表示順）。src は compare.html からの相対パス。
+// cost: 総コスト($)・所要分・行数（particle-morph.html の行数）と、モデルごとの内訳。
+// 内訳の usd は API 定価換算、outputTokens は output トークン数、requests はリクエスト数。
+const TARGETS = [
+  {
+    label: '単発 Haiku',
+    src: 'solo-haiku/particle-morph.html',
+    cost: {
+      total: 0.360,
+      minutes: 11.3,
+      lines: 705,
+      breakdown: [
+        { model: 'Haiku', requests: 31, outputTokens: 53505, usd: 0.360 },
+      ],
+    },
+  },
+  {
+    label: '単発 Sonnet',
+    src: 'solo-sonnet/particle-morph.html',
+    cost: {
+      total: 1.540,
+      minutes: 6.5,
+      lines: 685,
+      breakdown: [
+        { model: 'Sonnet', requests: 35, outputTokens: 30226, usd: 1.540 },
+      ],
+    },
+  },
+  {
+    label: '単発 Opus',
+    src: 'solo-opus/particle-morph.html',
+    cost: {
+      total: 1.776,
+      minutes: 6.9,
+      lines: 848,
+      breakdown: [
+        { model: 'Opus', requests: 18, outputTokens: 28291, usd: 1.776 },
+      ],
+    },
+  },
+  {
+    label: '指揮者 Sonnet＋Haiku',
+    src: 'conductor-sonnet-haiku/particle-morph.html',
+    cost: {
+      total: 1.604,
+      minutes: 13.9,
+      lines: 1021,
+      breakdown: [
+        { model: 'Sonnet(指揮)', requests: 31, outputTokens: 13167, usd: 1.178 },
+        { model: 'Haiku(作業)', requests: 23, outputTokens: 96455, usd: 0.426 },
+      ],
+    },
+  },
+  {
+    label: '指揮者 Opus＋Sonnet',
+    src: 'conductor-opus-sonnet/particle-morph.html',
+    cost: {
+      total: 2.011,
+      minutes: 8.3,
+      lines: 1007,
+      breakdown: [
+        { model: 'Opus(指揮)', requests: 18, outputTokens: 9335, usd: 1.127 },
+        { model: 'Sonnet(作業)', requests: 6, outputTokens: 48729, usd: 0.884 },
+      ],
+    },
+  },
+  {
+    label: '指揮者 Opus＋Haiku',
+    src: 'conductor-opus-haiku/particle-morph.html',
+    cost: {
+      total: 2.331,
+      minutes: 14.4,
+      lines: 961,
+      breakdown: [
+        { model: 'Opus(指揮)', requests: 41, outputTokens: 19669, usd: 2.064 },
+        { model: 'Haiku(作業)', requests: 8, outputTokens: 75184, usd: 0.267 },
+      ],
+    },
+  },
+];
+
+// 初期読み込み時の iframe 同士の間隔（ms）。重いので順番にずらして読み込む。
+const LOAD_INTERVAL_MS = 300;
+
+// コスト表示で、トークン数を「k」表記にするときの除数
+const TOKENS_PER_K = 1000;
+
+// コスト表の列見出し
+const COST_COLUMNS = ['構成', '総コスト$', '所要分', '行数', '内訳'];
+
+// レイアウトごとの列数・行数。タブは 1×1 で、選んだ 1 つだけ表示する。
+const LAYOUTS = {
+  '3x2': { cols: 3, rows: 2 },
+  '2x3': { cols: 2, rows: 3 },
+  'tabs': { cols: 1, rows: 1 },
+};
+
+// ===== 状態 =====
+
+// layout: 現在のレイアウト / active: タブ表示で選ばれた番号 / expanded: 全画面拡大中の番号（null なら通常表示）
+const state = { layout: '3x2', active: 0, expanded: null };
+
+// 各セルの DOM 参照をまとめた配列（TARGETS と同じ順）
+const panes = [];
+
+// 遅延読み込みのタイマー ID。リロード時にまとめて解除するために保持する。
+let loadTimers = [];
+
+// ===== DOM 参照 =====
+
+const grid = document.getElementById('grid');
+const tabsBar = document.getElementById('tabs');
+const layoutSelect = document.getElementById('layout');
+const reloadButton = document.getElementById('reload');
+const costButton = document.getElementById('cost-table');
+const costOverlay = document.getElementById('cost-overlay');
+const costSlot = document.getElementById('cost-table-slot');
+
+// ===== 構築 =====
+
+// TARGETS から、セル（iframe + ラベル）とタブボタンを生成する。
+// iframe の src はここでは設定しない（読み込みは loadStaggered で行う）。
+function buildPanes() {
+  TARGETS.forEach((target, index) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('allow', 'autoplay');
+    iframe.title = target.label;
+
+    const label = document.createElement('button');
+    label.type = 'button';
+    label.className = 'cell-label';
+    label.textContent = target.label;
+    label.title = 'クリックで全画面拡大 / 戻す';
+    label.addEventListener('click', () => toggleExpanded(index));
+
+    // ラベルの右に「$1.54 · 6.5分」のコスト表示を横並びにする
+    const cost = document.createElement('span');
+    cost.className = 'cell-cost';
+    cost.textContent = formatCellCost(target.cost);
+
+    const head = document.createElement('div');
+    head.className = 'cell-head';
+    head.append(label, cost);
+
+    cell.append(iframe, head);
+    grid.append(cell);
+
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.className = 'tab-btn';
+    tab.textContent = target.label;
+    tab.addEventListener('click', () => {
+      state.active = index;
+      render();
+    });
+    tabsBar.append(tab);
+
+    panes.push({ cell, iframe, tab });
+  });
+}
+
+// ===== 読み込み =====
+
+// 指定番号の iframe に src を設定して読み込む。
+function loadFrame(index) {
+  panes[index].iframe.src = TARGETS[index].src;
+}
+
+// 保留中の遅延読み込みをすべて解除する。
+function cancelPendingLoads() {
+  loadTimers.forEach((timerId) => clearTimeout(timerId));
+  loadTimers = [];
+}
+
+// 初回: 300ms 間隔で順に読み込む（同時読み込みの負荷を避ける）。
+function loadStaggered() {
+  cancelPendingLoads();
+  TARGETS.forEach((_, index) => {
+    const timerId = setTimeout(() => loadFrame(index), index * LOAD_INTERVAL_MS);
+    loadTimers.push(timerId);
+  });
+}
+
+// 全 iframe を同時に再読み込みし、再生タイミングを揃える。
+// src を再設定すると各 iframe が再ナビゲーションされる。
+function reloadAll() {
+  cancelPendingLoads();
+  TARGETS.forEach((_, index) => loadFrame(index));
+}
+
+// ===== 表示 =====
+
+// 拡大・タブ・レイアウトの状態から、グリッドとセルの表示を更新する。
+function render() {
+  const isTabs = state.layout === 'tabs';
+  const { cols, rows } = LAYOUTS[state.layout];
+
+  // 拡大中は拡大対象、タブ表示中は選択中のタブだけを 1 セルで表示する
+  const singleIndex = state.expanded ?? (isTabs ? state.active : null);
+  const isSingle = singleIndex !== null;
+
+  layoutSelect.value = state.layout;
+  tabsBar.hidden = !isTabs;
+  grid.style.gridTemplateColumns = `repeat(${isSingle ? 1 : cols}, minmax(0, 1fr))`;
+  grid.style.gridTemplateRows = `repeat(${isSingle ? 1 : rows}, minmax(0, 1fr))`;
+
+  panes.forEach((pane, index) => {
+    pane.cell.hidden = isSingle && index !== singleIndex;
+    pane.tab.setAttribute('aria-pressed', String(isTabs && index === state.active));
+  });
+}
+
+// ラベルクリック: 未拡大なら拡大し、拡大中の同じセルならもとに戻す。
+function toggleExpanded(index) {
+  state.expanded = state.expanded === index ? null : index;
+  render();
+}
+
+// ===== 表示用の整形 =====
+
+// 金額は小数第 2 位までの「$1.54」形式
+function formatUsd(value) {
+  return `$${value.toFixed(2)}`;
+}
+
+// 所要時間は小数第 1 位までの「6.5分」形式
+function formatMinutes(value) {
+  return `${value.toFixed(1)}分`;
+}
+
+// セル左上に出す「$1.54 · 6.5分」
+function formatCellCost(cost) {
+  return `${formatUsd(cost.total)} · ${formatMinutes(cost.minutes)}`;
+}
+
+// 内訳 1 行: 「Sonnet(指揮) $1.18・31req・out 13.2k」
+function formatBreakdown(item) {
+  const outputK = (item.outputTokens / TOKENS_PER_K).toFixed(1);
+  return `${item.model} ${formatUsd(item.usd)}・${item.requests}req・out ${outputK}k`;
+}
+
+// ===== コスト表 =====
+
+// 表の列見出し行を作る
+function buildCostHead() {
+  const row = document.createElement('tr');
+  COST_COLUMNS.forEach((name) => {
+    const th = document.createElement('th');
+    th.textContent = name;
+    row.append(th);
+  });
+  const thead = document.createElement('thead');
+  thead.append(row);
+  return thead;
+}
+
+// 行に 1 セル（td）を追加する
+function appendCell(row, content) {
+  const td = document.createElement('td');
+  td.append(content);
+  row.append(td);
+}
+
+// 総コスト列: 金額と、最大値を 100% とした横棒
+function buildTotalCell(total, maxTotal) {
+  const wrap = document.createElement('div');
+  wrap.className = 'cost-total';
+
+  const amount = document.createElement('span');
+  amount.textContent = formatUsd(total);
+
+  const track = document.createElement('div');
+  track.className = 'cost-bar-track';
+
+  const bar = document.createElement('div');
+  bar.className = 'cost-bar';
+  bar.style.width = `${(total / maxTotal) * 100}%`;
+
+  track.append(bar);
+  wrap.append(amount, track);
+  return wrap;
+}
+
+// 内訳列: モデルごとに 1 行ずつ
+function buildBreakdownCell(breakdown) {
+  const wrap = document.createElement('div');
+  wrap.className = 'cost-breakdown';
+  breakdown.forEach((item) => {
+    const line = document.createElement('div');
+    line.textContent = formatBreakdown(item);
+    wrap.append(line);
+  });
+  return wrap;
+}
+
+// 1 構成ぶんの行。最安の行は is-cheapest で薄い緑に強調する。
+function buildCostRow(target, maxTotal, cheapestTotal) {
+  const { cost } = target;
+  const row = document.createElement('tr');
+  if (cost.total === cheapestTotal) {
+    row.className = 'is-cheapest';
+  }
+  appendCell(row, target.label);
+  appendCell(row, buildTotalCell(cost.total, maxTotal));
+  appendCell(row, cost.minutes.toFixed(1));
+  appendCell(row, String(cost.lines));
+  appendCell(row, buildBreakdownCell(cost.breakdown));
+  return row;
+}
+
+// TARGETS からコスト表全体を作る（起動時に 1 回だけ生成する）
+function buildCostTable() {
+  const totals = TARGETS.map((target) => target.cost.total);
+  const maxTotal = Math.max(...totals);
+  const cheapestTotal = Math.min(...totals);
+
+  const body = document.createElement('tbody');
+  body.append(...TARGETS.map((target) => buildCostRow(target, maxTotal, cheapestTotal)));
+
+  const table = document.createElement('table');
+  table.className = 'cost-table';
+  table.append(buildCostHead(), body);
+  return table;
+}
+
+function openCostTable() {
+  costOverlay.hidden = false;
+}
+
+function closeCostTable() {
+  costOverlay.hidden = true;
+}
+
+// ツールバーのボタン: 開いていれば閉じ、閉じていれば開く
+function toggleCostTable() {
+  if (costOverlay.hidden) {
+    openCostTable();
+  } else {
+    closeCostTable();
+  }
+}
+
+// ===== イベント =====
+
+reloadButton.addEventListener('click', reloadAll);
+
+costButton.addEventListener('click', toggleCostTable);
+
+// オーバーレイ（背景）そのものをクリックしたときだけ閉じる。パネル内のクリックは無視する。
+costOverlay.addEventListener('click', (event) => {
+  if (event.target === costOverlay) {
+    closeCostTable();
+  }
+});
+
+layoutSelect.addEventListener('change', (event) => {
+  state.layout = event.target.value;
+  render();
+});
+
+// Esc: コスト表が開いていれば閉じ、そうでなければ拡大を解除する（iframe 内にフォーカスがあるときは効かない点に注意）
+window.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') {
+    return;
+  }
+  if (!costOverlay.hidden) {
+    closeCostTable();
+    return;
+  }
+  if (state.expanded !== null) {
+    state.expanded = null;
+    render();
+  }
+});
+
+// ===== 起動 =====
+
+buildPanes();
+costSlot.append(buildCostTable());
+render();
+loadStaggered();
+</script>
+</body>
+</html>
