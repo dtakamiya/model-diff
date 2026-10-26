@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Java 家計簿 モデル比較</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+  html, body {
+    margin: 0;
+    background: #000;
+    color: #ccc;
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    font-size: 13px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 11;
+    height: 36px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 10px;
+    background: #000;
+    border-bottom: 1px solid #222;
+  }
+  #toolbar { overflow-x: auto; white-space: nowrap; }
+  #toolbar button, #toolbar select {
+    white-space: nowrap;
+    background: #111;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font: inherit;
+    cursor: pointer;
+  }
+  #toolbar button:hover, #toolbar select:hover { color: #fff; border-color: #666; }
+  #generated { margin-left: auto; color: #777; font-size: 11px; }
+
+  #error {
+    margin: 16px 10px;
+    padding: 12px 14px;
+    background: #2a1010;
+    border: 1px solid #733;
+    border-radius: 6px;
+    color: #f0b0b0;
+    white-space: pre-wrap;
+  }
+  #error[hidden] { display: none; }
+
+  /* 比較表 */
+  #summary { padding: 10px; overflow-x: auto; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tbl th, .tbl td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #222;
+    text-align: left;
+    vertical-align: top;
+  }
+  .tbl th { color: #888; font-weight: normal; white-space: nowrap; }
+  #summary th { cursor: pointer; user-select: none; }
+  #summary th:hover { color: #fff; }
+  .tbl td.best { background: rgba(60, 160, 80, 0.18); }
+  .tbl td.na { color: #666; }
+  .ng { color: #e07070; }
+  .ok { color: #6cc788; }
+  .bar-track { height: 6px; margin-top: 4px; min-width: 90px; background: #1a1a1a; border-radius: 3px; }
+  .bar { height: 100%; background: #5b8def; border-radius: 3px; }
+
+  #tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px 10px;
+    border-bottom: 1px solid #222;
+    overflow-x: auto;
+  }
+  #tabs[hidden] { display: none; }
+  .tab-btn {
+    background: #111;
+    color: #999;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tab-btn[aria-pressed="true"] { color: #fff; border-color: #888; }
+
+  /* カード */
+  #grid { display: grid; gap: 2px; background: #222; }
+  .cell {
+    position: relative;
+    min-width: 0;
+    height: 560px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #000;
+  }
+  .cell[hidden] { display: none; }
+  #grid.single .cell { height: calc(100vh - 100px); }
+  .cell-head { display: flex; align-items: center; gap: 6px; padding: 6px; }
+  .cell-label {
+    background: rgba(0, 0, 0, 0.55);
+    color: #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .cell-label:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
+  .cell-cost { background: rgba(255, 255, 255, 0.08); color: #e6e6e6; border-radius: 4px; padding: 2px 6px; font-size: 11px; white-space: nowrap; }
+  .card-tabs { display: flex; gap: 6px; padding: 0 6px 6px; border-bottom: 1px solid #222; }
+  .card-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px; font-size: 12px; }
+  .card-body pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: 11px/1.5 ui-monospace, Menlo, Consolas, monospace;
+    color: #ccc;
+  }
+  .card-body pre.code { white-space: pre; overflow-wrap: normal; }
+  .card-body pre code.hljs { padding: 0; background: transparent; }
+  .case { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid #1a1a1a; }
+  .case .id { color: #777; flex: 0 0 36px; }
+  .case .detail { color: #999; display: block; font-size: 11px; overflow-wrap: anywhere; }
+  .muted { color: #777; }
+  .src-bar { margin-bottom: 8px; }
+  .src-bar select { background: #111; color: #ccc; border: 1px solid #333; border-radius: 4px; padding: 3px 6px; font: inherit; max-width: 100%; }
+
+  /* モーダル */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  #overlay[hidden] { display: none; }
+  .dialog {
+    box-sizing: border-box;
+    width: min(960px, 92vw);
+    max-height: 80vh;
+    overflow: auto;
+    padding: 16px 18px;
+    background: #0d0d0d;
+    border: 1px solid #333;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .dialog h2 { margin: 0 0 10px; color: #fff; font-size: 14px; font-weight: 600; }
+  .dialog .tbl td:last-child { overflow-wrap: anywhere; }
+  .cost-breakdown div { white-space: nowrap; }
+  .cost-note { margin: 12px 0 0; color: #777; font-size: 11px; line-height: 1.6; }
+  .tbl td.c { text-align: center; }
+
+  /* レビュー */
+  #method { color: #777; font-size: 11px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+  #method + #generated { margin-left: 0; }
+  .rv-axis { display: grid; grid-template-columns: 84px 1fr; gap: 2px 8px; padding: 4px 0; align-items: center; }
+  .rv-axis .rv-meta { grid-column: 2; color: #888; font-size: 11px; }
+  .rv-axis .bar-track { margin-top: 0; min-width: 0; }
+  .rv-avg { color: #fff; margin-left: 6px; }
+  .rv-split { color: #e0b060; font-size: 10px; margin-left: 6px; border: 1px solid #5a4520; border-radius: 3px; padding: 0 4px; }
+  .rv-toggle { display: flex; gap: 6px; margin: 10px 0 6px; }
+  .rv-comment { padding: 3px 0; color: #aaa; line-height: 1.5; }
+  .rv-comment b { color: #888; font-weight: normal; margin-right: 6px; }
+  .rv-list { margin: 4px 0 4px 16px; padding: 0; color: #aaa; line-height: 1.5; }
+  .rv-h { margin: 10px 0 2px; color: #888; font-size: 11px; }
+  .rv-summary { margin: 8px 0 0; color: #ccc; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header id="toolbar">
+  <button id="reload" type="button">再読込</button>
+  <select id="layout" aria-label="レイアウト">
+    <option value="3x2">3×2</option>
+    <option value="2x3">2×3</option>
+    <option value="tabs">1列ずつ（タブ）</option>
+  </select>
+  <button id="cost-btn" type="button" aria-haspopup="dialog">コスト表</button>
+  <button id="cases-btn" type="button" aria-haspopup="dialog">ケース横断表</button>
+  <span id="method"></span>
+  <span id="generated"></span>
+</header>
+
+<div id="error" hidden role="alert"></div>
+<section id="summary"></section>
+<nav id="tabs" hidden></nav>
+<main id="grid"></main>
+
+<div id="overlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <h2 id="dialog-title"></h2>
+    <div id="dialog-slot"></div>
+  </div>
+</div>
+
+<script>
+// ===== 設定 =====
+const DEFAULT_DATA = 'results.json';
+const DEFAULT_REVIEWS = 'reviews.json';
+const MAX_SCORE = 10;
+const SPLIT_THRESHOLD = 3;
+const TOKENS_PER_K = 1000;
+const LAYOUTS = { '3x2': { cols: 3, rows: 2 }, '2x3': { cols: 2, rows: 3 }, 'tabs': { cols: 1, rows: 1 } };
+const CARD_TABS = [
+  { key: 'review', label: 'レビュー' },
+  { key: 'accept', label: '受け入れ' },
+  { key: 'sample', label: '実行例' },
+  { key: 'source', label: 'ソース' },
+  { key: 'log', label: 'ビルドログ' },
+];
+// 拡張子 → highlight.js の言語（common バンドルに含まれるもの）
+const LANG_BY_EXT = { java: 'java', xml: 'xml', json: 'json', md: 'markdown', yml: 'yaml', yaml: 'yaml', kts: 'kotlin', gradle: 'java', properties: 'ini', sh: 'bash' };
+
+// 比較表の列。value は並べ替え用の数値（null は常に最後）、best は最良を決める向き。
+const BASE_COLUMNS = [
+  { key: 'label', name: '構成', value: (t, i) => i },
+  { key: 'acc', name: '受け入れ合格', value: (t) => accRate(t), best: 'max' },
+  { key: 'own', name: '自前テスト(失敗)', value: (t) => (t.ownTests ? t.ownTests.failed : null), best: 'min' },
+  { key: 'build', name: 'ビルド', value: (t) => (t.build ? (t.build.ok ? 0 : 1) : null), best: 'min' },
+  { key: 'lines', name: '行数 main/test', value: (t) => (t.lines ? t.lines.main : null) },
+  { key: 'cost', name: 'コスト$', value: (t) => (t.cost ? t.cost.total : null), best: 'min' },
+  { key: 'min', name: '時間(分)', value: (t) => (t.cost ? t.cost.minutes : null), best: 'min' },
+];
+let COLUMNS = BASE_COLUMNS;
+
+// レビュー列（reviews 読み込み後に COLUMNS へ追加）
+function buildColumns() {
+  if (!reviews) { COLUMNS = BASE_COLUMNS; return; }
+  const axisCols = reviews.axes.map((a) => ({ key: `rv_${a.key}`, name: a.label, axis: a.key, value: (t) => reviewAvg(t, a.key), best: 'max' }));
+  const total = { key: 'rv_total', name: `レビュー合計/${reviews.axes.length * MAX_SCORE}`, axis: 'total', value: (t) => reviewAvg(t, 'total'), best: 'max' };
+  COLUMNS = [...BASE_COLUMNS, ...axisCols, total];
+}
+
+// ===== 状態 =====
+const state = { layout: '3x2', active: 0, expanded: null, sortKey: null, sortDir: 1, modal: null };
+let targets = [];
+let panes = [];
+let dataUrl = DEFAULT_DATA;
+let reviews = null;
+
+const $ = (id) => document.getElementById(id);
+const grid = $('grid');
+const tabsBar = $('tabs');
+const overlay = $('overlay');
+
+// ===== ヘルパー =====
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+const fmtUsd = (v) => (isNum(v) ? `$${v.toFixed(2)}` : '—');
+const fmtMin = (v) => (isNum(v) ? `${v.toFixed(1)}分` : '—');
+const fmtK = (v) => (isNum(v) ? `${(v / TOKENS_PER_K).toFixed(1)}k` : '—');
+
+function accRate(t) {
+  const a = t.acceptance;
+  return a && isNum(a.total) && a.total > 0 ? a.passed / a.total : null;
+}
+
+function reviewOf(t) {
+  return reviews && reviews.targets[t.id] ? reviews.targets[t.id] : null;
+}
+function reviewAvg(t, axis) {
+  const r = reviewOf(t);
+  const v = r && r.average ? r.average[axis] : null;
+  return isNum(v) ? v : null;
+}
+
+function showError(message) {
+  const box = $('error');
+  box.textContent = message;
+  box.hidden = false;
+}
+
+// ===== 比較表 =====
+function bestValues() {
+  const result = {};
+  COLUMNS.forEach((col) => {
+    if (!col.best) return;
+    const vals = targets.map((t, i) => col.value(t, i)).filter(isNum);
+    if (vals.length < 2) return;
+    result[col.key] = col.best === 'max' ? Math.max(...vals) : Math.min(...vals);
+  });
+  return result;
+}
+
+function sortedTargets() {
+  const indexed = targets.map((t, i) => ({ t, i }));
+  const col = COLUMNS.find((c) => c.key === state.sortKey);
+  if (!col) return indexed;
+  return indexed.sort((a, b) => {
+    const va = col.value(a.t, a.i);
+    const vb = col.value(b.t, b.i);
+    if (!isNum(va) && !isNum(vb)) return 0;
+    if (!isNum(va)) return 1;
+    if (!isNum(vb)) return -1;
+    return (va - vb) * state.sortDir;
+  });
+}
+
+function summaryCell(row, col, content, best, na) {
+  const td = el('td');
+  if (content instanceof Node) td.append(content); else td.textContent = content;
+  const v = col.value(row.t, row.i);
+  if (na) td.className = 'na';
+  else if (best[col.key] !== undefined && v === best[col.key]) td.className = 'best';
+  row.tr.append(td);
+}
+
+function accCell(t) {
+  const rate = accRate(t);
+  if (rate === null) return null;
+  const wrap = el('div');
+  wrap.append(el('span', '', `${t.acceptance.passed}/${t.acceptance.total} (${Math.round(rate * 100)}%)`));
+  const track = el('div', 'bar-track');
+  const bar = el('div', 'bar');
+  bar.style.width = `${rate * 100}%`;
+  track.append(bar);
+  wrap.append(track);
+  return wrap;
+}
+
+function totalCell(v) {
+  if (v === null) return '—';
+  const max = reviews.axes.length * MAX_SCORE;
+  const wrap = el('div');
+  wrap.append(el('span', '', `${v.toFixed(1)}/${max}`));
+  const track = el('div', 'bar-track');
+  const bar = el('div', 'bar');
+  bar.style.width = `${Math.min(100, (v / max) * 100)}%`;
+  track.append(bar);
+  wrap.append(track);
+  return wrap;
+}
+
+function renderSummary() {
+  const table = el('table', 'tbl');
+  const headRow = el('tr');
+  COLUMNS.forEach((col) => {
+    const th = el('th', '', col.name + (state.sortKey === col.key ? (state.sortDir > 0 ? ' ▲' : ' ▼') : ''));
+    th.title = 'クリックで並べ替え';
+    th.addEventListener('click', () => {
+      state.sortDir = state.sortKey === col.key ? -state.sortDir : 1;
+      state.sortKey = col.key;
+      renderSummary();
+    });
+    headRow.append(th);
+  });
+  const thead = el('thead');
+  thead.append(headRow);
+
+  const best = bestValues();
+  const tbody = el('tbody');
+  sortedTargets().forEach(({ t, i }) => {
+    const row = { t, i, tr: el('tr') };
+    const cols = Object.fromEntries(COLUMNS.map((c) => [c.key, c]));
+    summaryCell(row, cols.label, t.label, best, false);
+    const acc = accCell(t);
+    summaryCell(row, cols.acc, acc || '—', best, !acc);
+    const own = t.ownTests;
+    summaryCell(row, cols.own, own ? `${own.total} (${own.failed})` : '—', best, !own);
+    const buildText = el('span', t.build && t.build.ok ? 'ok' : 'ng', t.build ? (t.build.ok ? '成功' : '失敗') : '—');
+    summaryCell(row, cols.build, buildText, best, !t.build);
+    summaryCell(row, cols.lines, t.lines ? `${t.lines.main} / ${t.lines.test}` : '—', best, !t.lines);
+    summaryCell(row, cols.cost, fmtUsd(t.cost && t.cost.total), best, !(t.cost && isNum(t.cost.total)));
+    summaryCell(row, cols.min, t.cost && isNum(t.cost.minutes) ? t.cost.minutes.toFixed(1) : '—', best, !(t.cost && isNum(t.cost.minutes)));
+    COLUMNS.filter((c) => c.axis).forEach((c) => {
+      const v = reviewAvg(t, c.axis);
+      summaryCell(row, c, c.axis === 'total' ? totalCell(v) : (v === null ? '—' : v.toFixed(1)), best, v === null);
+    });
+    tbody.append(row.tr);
+  });
+  table.append(thead, tbody);
+  $('summary').replaceChildren(table);
+}
+
+// ===== カード =====
+function buildAcceptBody(t) {
+  const a = t.acceptance;
+  if (!a || !Array.isArray(a.cases)) return el('p', 'muted', '受け入れテストの結果がありません。');
+  const wrap = el('div');
+  wrap.append(el('p', '', `合格 ${a.passed}/${a.total}`));
+  a.cases.forEach((c) => {
+    const row = el('div', 'case');
+    row.append(el('span', c.pass ? 'ok' : 'ng', c.pass ? '✓' : '✗'), el('span', 'id', c.id));
+    const text = el('div');
+    text.append(el('span', '', c.name));
+    if (c.detail) text.append(el('span', 'detail', c.detail));
+    row.append(text);
+    wrap.append(row);
+  });
+  return wrap;
+}
+
+function buildPre(text, emptyMessage) {
+  if (!text) return el('p', 'muted', emptyMessage);
+  return el('pre', '', text);
+}
+
+async function loadSource(pane, t, path) {
+  const holder = pane.sourceView;
+  holder.replaceChildren(el('p', 'muted', '読み込み中…'));
+  const url = `${encodeURIComponent(t.id)}/${path.split('/').map(encodeURIComponent).join('/')}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    if (pane.currentPath !== path) return; // 別ファイルに切り替わっていたら捨てる
+    const pre = el('pre', 'code');
+    const code = el('code', '', text);
+    const ext = path.includes('.') ? path.split('.').pop().toLowerCase() : '';
+    const lang = LANG_BY_EXT[ext];
+    if (lang && window.hljs && hljs.getLanguage(lang)) code.className = `language-${lang}`;
+    pre.append(code);
+    holder.replaceChildren(pre);
+    if (window.hljs && lang) {
+      try { hljs.highlightElement(code); } catch (e) { console.warn('highlight failed', e); }
+    }
+  } catch (err) {
+    if (pane.currentPath !== path) return;
+    holder.replaceChildren(el('p', 'ng', `ソースを読み込めませんでした（${url}）: ${err.message}`));
+  }
+}
+
+function buildSourceBody(pane, t) {
+  const files = Array.isArray(t.files) ? t.files : [];
+  if (files.length === 0) return el('p', 'muted', 'ファイル一覧がありません。');
+  const wrap = el('div');
+  const bar = el('div', 'src-bar');
+  const select = el('select');
+  files.forEach((f) => {
+    const opt = el('option', '', f);
+    opt.value = f;
+    select.append(opt);
+  });
+  if (!files.includes(pane.currentPath)) pane.currentPath = files[0];
+  select.value = pane.currentPath;
+  select.addEventListener('change', () => {
+    pane.currentPath = select.value;
+    loadSource(pane, t, pane.currentPath);
+  });
+  bar.append(select);
+  pane.sourceView = el('div');
+  wrap.append(bar, pane.sourceView);
+  loadSource(pane, t, pane.currentPath);
+  return wrap;
+}
+
+function scoreBar(v) {
+  const track = el('div', 'bar-track');
+  const bar = el('div', 'bar');
+  bar.style.width = `${isNum(v) ? Math.min(100, (v / MAX_SCORE) * 100) : 0}%`;
+  track.append(bar);
+  return track;
+}
+
+function listBlock(title, items) {
+  const box = el('div');
+  box.append(el('div', 'rv-h', title));
+  const ul = el('ul', 'rv-list');
+  (items.length ? items : ['—']).forEach((x) => ul.append(el('li', '', x)));
+  box.append(ul);
+  return box;
+}
+
+function buildReviewBody(pane, t) {
+  if (!reviews) return el('p', 'muted', 'レビュー未実施');
+  const r = reviewOf(t);
+  if (!r) return el('p', 'muted', 'この構成のレビューはありません。');
+  const by = r.byReviewer || {};
+  const names = reviews.reviewers.filter((n) => by[n]);
+  const wrap = el('div');
+  reviews.axes.forEach((a) => {
+    const row = el('div', 'rv-axis');
+    const avg = reviewAvg(t, a.key);
+    row.append(el('span', '', a.label), scoreBar(avg));
+    const meta = el('div', 'rv-meta');
+    meta.append(el('span', 'rv-avg', avg === null ? '—' : avg.toFixed(1)));
+    const scores = names.map((n) => by[n].scores[a.key]).filter(isNum);
+    meta.append(el('span', '', ' ' + names.map((n) => `${n} ${isNum(by[n].scores[a.key]) ? by[n].scores[a.key] : '—'}`).join(' / ')));
+    if (scores.length >= 2 && Math.max(...scores) - Math.min(...scores) >= SPLIT_THRESHOLD) meta.append(el('span', 'rv-split', '評価割れ'));
+    row.append(meta);
+    wrap.append(row);
+  });
+  const total = reviewAvg(t, 'total');
+  wrap.append(el('div', 'rv-h', `平均合計 ${total === null ? '—' : total.toFixed(1)}/${reviews.axes.length * MAX_SCORE}`));
+  if (names.length === 0) return wrap;
+
+  if (!names.includes(pane.reviewer)) pane.reviewer = names[0];
+  const toggle = el('div', 'rv-toggle');
+  names.forEach((n) => {
+    const b = el('button', 'tab-btn', n);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(n === pane.reviewer));
+    b.addEventListener('click', () => { pane.reviewer = n; renderCardBody(pane, t); });
+    toggle.append(b);
+  });
+  wrap.append(toggle);
+  const rv = by[pane.reviewer];
+  reviews.axes.forEach((a) => {
+    const c = el('div', 'rv-comment');
+    c.append(el('b', '', `${a.label} ${isNum(rv.scores[a.key]) ? rv.scores[a.key] : '—'}`), el('span', '', rv.comments[a.key] || ''));
+    wrap.append(c);
+  });
+  wrap.append(listBlock('強み', rv.strengths), listBlock('弱み', rv.weaknesses));
+  wrap.append(el('div', 'rv-h', '総評'), el('p', 'rv-summary', rv.summary));
+  return wrap;
+}
+
+function renderCardBody(pane, t) {
+  const builders = {
+    review: () => buildReviewBody(pane, t),
+    accept: () => buildAcceptBody(t),
+    sample: () => buildPre(t.sample, '実行例がありません。'),
+    source: () => buildSourceBody(pane, t),
+    log: () => {
+      const head = el('p', t.build && t.build.ok ? 'ok' : 'ng', t.build ? (t.build.ok ? 'ビルド成功' : 'ビルド失敗') : 'ビルド情報なし');
+      const wrap = el('div');
+      wrap.append(head);
+      if (t.build && t.build.log) wrap.append(el('pre', '', t.build.log));
+      return wrap;
+    },
+  };
+  pane.body.replaceChildren(builders[pane.tabKey]());
+  pane.tabButtons.forEach((b, k) => b.setAttribute('aria-pressed', String(CARD_TABS[k].key === pane.tabKey)));
+}
+
+function buildPanes() {
+  grid.replaceChildren();
+  tabsBar.replaceChildren();
+  panes = targets.map((t, index) => {
+    const cell = el('div', 'cell');
+    const label = el('button', 'cell-label', t.label);
+    label.type = 'button';
+    label.title = 'クリックで全画面拡大 / 戻す';
+    label.addEventListener('click', () => {
+      state.expanded = state.expanded === index ? null : index;
+      render();
+    });
+    const cost = el('span', 'cell-cost', t.cost ? `${fmtUsd(t.cost.total)} · ${fmtMin(t.cost.minutes)}` : '—');
+    const head = el('div', 'cell-head');
+    head.append(label, cost);
+
+    const pane = { cell, body: el('div', 'card-body'), tabKey: 'review', reviewer: null, currentPath: null, sourceView: null, tabButtons: [] };
+    const tabRow = el('div', 'card-tabs');
+    CARD_TABS.forEach((ct) => {
+      const b = el('button', 'tab-btn', ct.label);
+      b.type = 'button';
+      b.addEventListener('click', () => { pane.tabKey = ct.key; renderCardBody(pane, t); });
+      pane.tabButtons.push(b);
+      tabRow.append(b);
+    });
+    cell.append(head, tabRow, pane.body);
+    grid.append(cell);
+
+    const tab = el('button', 'tab-btn', t.label);
+    tab.type = 'button';
+    tab.addEventListener('click', () => { state.active = index; render(); });
+    tabsBar.append(tab);
+    pane.tab = tab;
+
+    renderCardBody(pane, t);
+    return pane;
+  });
+}
+
+function render() {
+  const isTabs = state.layout === 'tabs';
+  const { cols, rows } = LAYOUTS[state.layout];
+  const singleIndex = state.expanded ?? (isTabs ? state.active : null);
+  const isSingle = singleIndex !== null;
+  $('layout').value = state.layout;
+  tabsBar.hidden = !isTabs;
+  grid.classList.toggle('single', isSingle);
+  grid.style.gridTemplateColumns = `repeat(${isSingle ? 1 : cols}, minmax(0, 1fr))`;
+  grid.style.gridTemplateRows = `repeat(${isSingle ? 1 : rows}, auto)`;
+  panes.forEach((pane, index) => {
+    pane.cell.hidden = isSingle && index !== singleIndex;
+    pane.tab.setAttribute('aria-pressed', String(isTabs && index === state.active));
+  });
+}
+
+// ===== モーダル =====
+function buildCostTable() {
+  const totals = targets.map((t) => (t.cost ? t.cost.total : null)).filter(isNum);
+  const max = Math.max(...totals, 0);
+  const min = Math.min(...totals);
+  const table = el('table', 'tbl');
+  const hr = el('tr');
+  ['構成', '総コスト$', '所要分', '行数(main/test)', '内訳'].forEach((n) => hr.append(el('th', '', n)));
+  const thead = el('thead');
+  thead.append(hr);
+  const tbody = el('tbody');
+  targets.forEach((t) => {
+    const tr = el('tr');
+    const c = t.cost;
+    const cheapest = c && c.total === min && totals.length > 1;
+    tr.append(el('td', cheapest ? 'best' : '', t.label));
+    const total = el('td', cheapest ? 'best' : '');
+    if (c && isNum(c.total)) {
+      total.append(el('span', '', fmtUsd(c.total)));
+      const track = el('div', 'bar-track');
+      const bar = el('div', 'bar');
+      bar.style.width = `${max > 0 ? (c.total / max) * 100 : 0}%`;
+      track.append(bar);
+      total.append(track);
+    } else total.textContent = '—';
+    tr.append(total);
+    tr.append(el('td', cheapest ? 'best' : '', c && isNum(c.minutes) ? c.minutes.toFixed(1) : '—'));
+    tr.append(el('td', cheapest ? 'best' : '', t.lines ? `${t.lines.main} / ${t.lines.test}` : '—'));
+    const bd = el('td', 'cost-breakdown' + (cheapest ? ' best' : ''));
+    ((c && c.breakdown) || []).forEach((item) => {
+      bd.append(el('div', '', `${item.model} ${fmtUsd(item.usd)}・in ${fmtK(item.inputTokens)}・out ${fmtK(item.outputTokens)}`));
+    });
+    tr.append(bd);
+    tbody.append(tr);
+  });
+  table.append(thead, tbody);
+  const wrap = el('div');
+  wrap.append(table, el('p', 'cost-note', 'API 定価換算。所要時間は最初〜最後の応答時刻の差。'));
+  return wrap;
+}
+
+function buildCasesTable() {
+  const ids = [];
+  const names = {};
+  targets.forEach((t) => {
+    ((t.acceptance && t.acceptance.cases) || []).forEach((c) => {
+      if (!(c.id in names)) { ids.push(c.id); names[c.id] = c.name; }
+    });
+  });
+  if (ids.length === 0) return el('p', 'muted', '受け入れケースのデータがありません。');
+  ids.sort();
+  const table = el('table', 'tbl');
+  const hr = el('tr');
+  hr.append(el('th', '', 'ケース'));
+  targets.forEach((t) => hr.append(el('th', '', t.label)));
+  const thead = el('thead');
+  thead.append(hr);
+  const tbody = el('tbody');
+  ids.forEach((id) => {
+    const tr = el('tr');
+    tr.append(el('td', '', `${id} ${names[id]}`));
+    targets.forEach((t) => {
+      const found = ((t.acceptance && t.acceptance.cases) || []).find((c) => c.id === id);
+      const td = el('td', 'c');
+      if (!found) { td.textContent = '—'; td.className = 'c na'; }
+      else {
+        td.append(el('span', found.pass ? 'ok' : 'ng', found.pass ? '✓' : '✗'));
+        if (found.detail) td.title = found.detail;
+      }
+      tr.append(td);
+    });
+    tbody.append(tr);
+  });
+  table.append(thead, tbody);
+  return table;
+}
+
+function openModal(kind) {
+  state.modal = kind;
+  $('dialog-title').textContent = kind === 'cost' ? 'コスト表' : '受け入れケース横断表';
+  $('dialog-slot').replaceChildren(kind === 'cost' ? buildCostTable() : buildCasesTable());
+  overlay.hidden = false;
+}
+function closeModal() {
+  state.modal = null;
+  overlay.hidden = true;
+}
+function toggleModal(kind) {
+  if (state.modal === kind) closeModal(); else openModal(kind);
+}
+
+// ===== 読み込み =====
+function validate(json) {
+  if (!json || !Array.isArray(json.targets)) throw new Error('targets 配列がありません');
+  return json.targets.filter((t) => t && typeof t === 'object').map((t) => ({ ...t, id: String(t.id ?? ''), label: String(t.label ?? t.id ?? '') }));
+}
+
+const strArr = (v) => (Array.isArray(v) ? v.map(String) : []);
+const numMap = (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).filter(([, x]) => isNum(x)));
+const strMap = (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).map(([k, x]) => [k, String(x)]));
+
+function validateReviews(json) {
+  if (!json || !Array.isArray(json.axes) || !json.targets || typeof json.targets !== 'object') throw new Error('axes / targets がありません');
+  const axes = json.axes.filter((a) => a && a.key).map((a) => ({ key: String(a.key), label: String(a.label ?? a.key) }));
+  const reviewers = strArr(json.reviewers);
+  const out = {};
+  Object.entries(json.targets).forEach(([id, r]) => {
+    if (!r || typeof r !== 'object') return;
+    const byReviewer = {};
+    Object.entries(r.byReviewer || {}).forEach(([n, v]) => {
+      if (!v || typeof v !== 'object') return;
+      byReviewer[n] = { scores: numMap(v.scores), comments: strMap(v.comments), strengths: strArr(v.strengths), weaknesses: strArr(v.weaknesses), summary: String(v.summary ?? '') };
+    });
+    out[id] = { average: numMap(r.average), byReviewer };
+  });
+  return { axes, reviewers, method: json.method ? String(json.method) : '', targets: out };
+}
+
+async function loadReviews() {
+  const param = new URLSearchParams(location.search).get('reviews');
+  const url = param && /^[\w.\-]+\.json$/.test(param) ? param : DEFAULT_REVIEWS;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    reviews = validateReviews(await res.json());
+  } catch (err) {
+    console.info(`レビューデータ（${url}）なし: ${err.message}`);
+    reviews = null;
+  }
+  buildColumns();
+  const m = $('method');
+  m.textContent = reviews ? reviews.method : 'レビュー未実施';
+  m.title = m.textContent;
+}
+
+async function load() {
+  const param = new URLSearchParams(location.search).get('data');
+  dataUrl = param && /^[\w.\-]+\.json$/.test(param) ? param : DEFAULT_DATA;
+  $('error').hidden = true;
+  try {
+    const res = await fetch(dataUrl, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    targets = validate(json);
+    $('generated').textContent = json.generatedAt ? `生成: ${json.generatedAt}` : '';
+  } catch (err) {
+    targets = [];
+    panes = [];
+    $('summary').replaceChildren();
+    grid.replaceChildren();
+    showError(`結果データ（${dataUrl}）を読み込めませんでした。\nファイルが存在するか、HTTP サーバー経由で開いているか確認してください。\n詳細: ${err.message}`);
+    return;
+  }
+  await loadReviews();
+  state.active = 0;
+  state.expanded = null;
+  renderSummary();
+  buildPanes();
+  render();
+}
+
+// ===== イベント =====
+$('reload').addEventListener('click', load);
+$('layout').addEventListener('change', (e) => { state.layout = e.target.value; render(); });
+$('cost-btn').addEventListener('click', () => toggleModal('cost'));
+$('cases-btn').addEventListener('click', () => toggleModal('cases'));
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!overlay.hidden) { closeModal(); return; }
+  if (state.expanded !== null) { state.expanded = null; render(); }
+});
+
+load();
+</script>
+</body>
+</html>

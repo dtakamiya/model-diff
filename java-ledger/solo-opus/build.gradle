@@ -1,0 +1,30 @@
+plugins {
+    id 'application'
+}
+
+group = 'ledger'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Java 17 向けにコンパイルする（実行 JDK が新しくても 17 の API・バイトコードに揃える）
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+application {
+    mainClass = 'ledger.Main'
+}
+
+test {
+    useJUnitPlatform()
+}
